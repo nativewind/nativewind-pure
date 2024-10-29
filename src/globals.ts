@@ -4,34 +4,27 @@ import {
   type ColorSchemeName,
   type LayoutRectangle,
 } from "react-native";
-import { observable, weakFamily, family, type Observable } from "./observable";
+import { observable, weakFamily, family, mutable } from "./observable";
 import type { StyleRuleSet, StyleValueDescriptor } from "./types";
 
 /**
  * In development, these are observable to allow for hot-reloading.
  * In production these will be static StyleRuleSets.
  */
-export const styleFamily = family<
-  | Observable<StyleRuleSet | undefined, [StyleRuleSet | undefined]>
-  | StyleRuleSet
-  | undefined
->(() => {
-  return process.env.NODE_ENV === "production" ? undefined : observable();
+export const styleFamily = family(() => {
+  return process.env.NODE_ENV === "production"
+    ? mutable<StyleRuleSet>()
+    : observable<StyleRuleSet>();
 });
 
 /**
  * In development, these are observable to allow for hot-reloading.
  * In production these will be static StyleValueDescriptors.
  */
-export const variableFamily = family<
-  | Observable<
-      StyleValueDescriptor | undefined,
-      [StyleValueDescriptor | undefined]
-    >
-  | StyleValueDescriptor
-  | undefined
->(() => {
-  return process.env.NODE_ENV === "production" ? undefined : observable();
+export const variableFamily = family(() => {
+  return process.env.NODE_ENV === "production"
+    ? mutable<StyleValueDescriptor>()
+    : observable<StyleValueDescriptor>();
 });
 
 export const rem = observable(14);

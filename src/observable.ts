@@ -46,7 +46,13 @@ export function observable<Value, Args extends unknown[]>(
 
   return {
     get(effect) {
-      if (!init) {
+      /**
+       * Observables with read functions are lazy and only run the read function once.
+       *
+       * We also need to re-run the read function if this is a new effect
+       * to ensure that the effect is subscribed to this observable's dependents.
+       */
+      if (!init || (effect && !effects.has(effect))) {
         init = true;
         value =
           typeof read === "function"
@@ -64,6 +70,10 @@ export function observable<Value, Args extends unknown[]>(
 
       return value as Value;
     },
+    /**
+     * Sets the value of the observable and immediately runs all subscribed effects.
+     * If you are setting multiple observables in succession, use batch() instead.
+     */
     set(...args: [Value] | Args) {
       value =
         typeof write === "function"
@@ -76,13 +86,19 @@ export function observable<Value, Args extends unknown[]>(
         effect.run();
       }
     },
+    /**
+     * batch() accepts a Set<Effect> and instead of running the effects immediately,
+     * it will add them to the Set.
+     *
+     * It it up to the caller to run the effects in the Set.
+     */
     batch(batch, ...args: [Value] | Args) {
       value =
         typeof write === "function"
           ? write((observable, ...args) => {
               return observable.batch(batch, ...args);
             }, ...(args as Args))
-          : (args[0] as Value);
+          : (args[1] as Value);
 
       for (const effect of effects) {
         batch.add(effect);
@@ -91,9 +107,41 @@ export function observable<Value, Args extends unknown[]>(
   };
 }
 
+/**
+ * A non-observable object that can be mutated.
+ * In production, we don't need observability for everything,
+ * so we can this to avoid the overhead of observability.
+ */
+export type Mutable<Value> = {
+  get(): Value;
+  set(value: Value): void;
+};
+
+export function mutable<Value>(): Mutable<Value | undefined>;
+export function mutable<Value>(value?: Value): Mutable<Value> {
+  return {
+    get() {
+      return value as Value;
+    },
+    set(newValue: Value) {
+      value = newValue;
+    },
+  };
+}
+
+/**
+ * An effect can be used to subscribe to an observable. When the observable
+ * changes, the effect will run.
+ */
 export class Effect {
   constructor(public run: () => void) {}
   public dependencies = new Set<() => void>();
+
+  get<Value, Args extends unknown[]>(
+    readable: Observable<Value, Args> | Mutable<Value>
+  ) {
+    return readable.get(this);
+  }
 
   cleanup() {
     for (const dep of this.dependencies) {
@@ -101,20 +149,11 @@ export class Effect {
     }
     this.dependencies.clear();
   }
-  get<Value, Args extends unknown[]>(
-    observableOrValue: Observable<Value, Args> | Value
-  ) {
-    /**
-     * In production, things like StyleRuleSets will be static and not observable.
-     */
-    return typeof observableOrValue === "object" &&
-      observableOrValue &&
-      "get" in observableOrValue
-      ? observableOrValue.get(this)
-      : observableOrValue;
-  }
 }
 
+/**
+ * Utility around Map that creates a new value if it doesn't exist.
+ */
 export function family<Value>(fn: (name: string) => Value) {
   const map = new Map<string, Value>();
   return Object.assign(map, (name: string) => {
@@ -127,10 +166,13 @@ export function family<Value>(fn: (name: string) => Value) {
   });
 }
 
-export function weakFamily<Key extends object, Result>(
+/**
+ * Utility around WeakMap that creates a new value if it doesn't exist.
+ */
+export function weakFamily<Key extends WeakKey, Result>(
   fn: (key: Key) => Result
 ) {
-  const map = new WeakMap<object, Result>();
+  const map = new WeakMap<Key, Result>();
   return Object.assign(map, (key: Key) => {
     let value = map.get(key);
     if (!value) {
