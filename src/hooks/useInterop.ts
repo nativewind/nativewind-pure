@@ -19,6 +19,7 @@ import type { ConfigReducerState } from "../reducers/config";
 import type { Config, ConfigStates } from "../types";
 import { cleanupEffect } from "../utils/observable";
 import { useAnimation } from "./useAnimation";
+import { useInteraction } from "./useInteraction";
 
 export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
   const configStates: ConfigStates = {};
@@ -124,10 +125,15 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
       };
     }, []);
 
-    const animatedProps = useAnimation(state);
-
-    if (state.animations || state.transitions) {
-      state = { ...state, props: { ...state.props, style: animatedProps } };
+    /**
+     * Calculate the interaction and animation props
+     * We need to ensure that these do no modify the reducer state
+     */
+    let nextProps: Record<string, any> | undefined;
+    nextProps = useInteraction(state, nextProps);
+    nextProps = useAnimation(state, nextProps);
+    if (nextProps) {
+      state = { ...state, props: { ...state.props, ...nextProps } };
     }
 
     useDebugValue(state);

@@ -47,18 +47,8 @@ export const handlerFamily = buildHandlerFamily();
 
 export function useInteraction(
   state: ComponentReducerState,
-  props: Record<string, any>,
+  props?: Record<string, any>,
 ) {
-  /**
-   * Any styles that use the hover, active, or focus states would have
-   * accessed the family for that type.
-   */
-  const status = {
-    hover: hoverFamily.has(state.key),
-    active: activeFamily.has(state.key),
-    focus: focusFamily.has(state.key),
-  };
-
   /**
    * Create a handler for each interaction type, and as the key for sub-handlers
    */
@@ -66,30 +56,30 @@ export function useInteraction(
     (type: InteractionType, event: unknown) => {
       switch (type) {
         case "onHoverIn":
-          props.onHover?.(event);
+          props?.onHover?.(event);
           hoverFamily(state.key).set(true);
           break;
         case "onHoverOut":
-          props.onHover?.(event);
+          props?.onHover?.(event);
           hoverFamily(state.key).set(true);
           break;
         case "onPress":
-          props.onPress?.(event);
+          props?.onPress?.(event);
           break;
         case "onPressIn":
-          props.onPressIn?.(event);
+          props?.onPressIn?.(event);
           activeFamily(state.key).set(true);
           break;
         case "onPressOut":
-          props.onPressOut?.(event);
+          props?.onPressOut?.(event);
           activeFamily(state.key).set(false);
           break;
         case "onFocus":
-          props.onFocus?.(event);
+          props?.onFocus?.(event);
           focusFamily(state.key).set(true);
           break;
         case "onBlur":
-          props.onBlur?.(event);
+          props?.onBlur?.(event);
           focusFamily(state.key).set(false);
           break;
       }
@@ -97,5 +87,24 @@ export function useInteraction(
     [state, props],
   );
 
-  return [status, handler] as const;
+  if (hoverFamily.has(state.key)) {
+    props ??= {};
+    props.onHoverIn = handlerFamily("onHoverIn", handler);
+    props.onHoverIn = handlerFamily("onHoverOut", handler);
+  }
+
+  if (activeFamily.has(state.key)) {
+    props ??= {};
+    props.onPress = handlerFamily("onPress", handler);
+    props.onPressIn = handlerFamily("onPressIn", handler);
+    props.onPressOut = handlerFamily("onPressOut", handler);
+  }
+
+  if (focusFamily.has(state.key)) {
+    props ??= {};
+    props.onBlur = handlerFamily("onBlur", handler);
+    props.onFocus = handlerFamily("onFocus", handler);
+  }
+
+  return props;
 }

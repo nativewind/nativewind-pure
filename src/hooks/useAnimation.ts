@@ -4,7 +4,6 @@ import {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import type { ComponentReducerState } from "../reducers/component";
-import type { SharedValueAnimationIO, TransitionTuple } from "../types";
 
 /**
  * Wrapper around useAnimatedStyle that allows for animations and transitions.
@@ -15,12 +14,15 @@ import type { SharedValueAnimationIO, TransitionTuple } from "../types";
  * @param transitions
  * @returns
  */
-export function useAnimation(state: ComponentReducerState) {
+export function useAnimation(
+  state: ComponentReducerState,
+  props?: Record<string, any>,
+) {
   const animations = state.animations;
   const transitions = state.transitions;
   const originalStyle = state.props?.style as Record<string, any> | undefined;
 
-  return useAnimatedStyle(() => {
+  const animatedStyle = useAnimatedStyle(() => {
     const style: Record<string, any> = { ...originalStyle };
 
     const seenProperties = new Set<string>();
@@ -62,4 +64,11 @@ export function useAnimation(state: ComponentReducerState) {
 
     return style;
   }, [animations, transitions]);
+
+  if (state.animations || state.transitions) {
+    props ??= {};
+    props = { ...state.props, style: animatedStyle };
+  }
+
+  return props;
 }

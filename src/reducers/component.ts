@@ -21,7 +21,7 @@ export type ComponentReducerState = Readonly<{
   // The results of the config reducers grouped by their key
   configStates: Readonly<ConfigStates>;
   // The flattened version of groupedProps
-  props?: Record<string, unknown>;
+  props?: Record<string, any>;
   // The variables for each config, grouped by config key
   variables?: VariableContextValue;
   // The containers for each config, grouped by config key
