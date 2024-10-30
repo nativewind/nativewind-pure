@@ -32,7 +32,8 @@
   },
   "dependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.3.1",
-    "jest-expo": "^51.0.4"
+    "jest-expo": "^51.0.4",
+    "react-native-reanimated": "^3.16.1"
   },
   "jest": {
     "preset": "jest-expo",
