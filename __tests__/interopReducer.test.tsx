@@ -39,7 +39,17 @@ test("empty props", () => {
   });
 
   expect(stripUndefined(result.current)).toStrictEqual(
-    resultHelper(result.current, {}),
+    resultHelper(
+      result.current,
+      {},
+      {
+        declarations: {
+          epoch: 0,
+          // normal: [],
+          // guards: [],
+        },
+      },
+    ),
   );
 });
 
@@ -64,13 +74,13 @@ test("basic className", () => {
           style: { color: "red" },
         },
       },
-      // {
-      //   declarations: {
-      //     epoch: 0,
-      //     normal: [{ d: [{ color: "red" }], s: [0] }],
-      //     guards: [{ type: "prop", name: "className", value: "text-red-500" }],
-      //   },
-      // }
+      {
+        declarations: {
+          epoch: 1,
+          normal: [{ d: [{ color: "red" }], s: [0] }],
+          guards: [{ type: "prop", name: "className", value: "text-red-500" }],
+        },
+      },
     ),
   );
 });
@@ -150,19 +160,19 @@ test("variables", () => {
           style: { color: "blue" },
         },
       },
-      // {
-      //   declarations: {
-      //     epoch: 0,
-      //     normal: [{ d: [[[{}, "var", ["color"]], "^color", 1]], s: [0] }],
-      //     guards: [
-      //       { type: "prop", name: "className", value: "text-[--color]" },
-      //     ],
-      //   },
-      //   styles: {
-      //     epoch: 1,
-      //     guards: [{ type: "variable", name: "color", value: "blue" }],
-      //   },
-      // }
+      {
+        declarations: {
+          epoch: 1,
+          normal: [{ d: [[[{}, "var", ["color"]], "^color", 1]], s: [0] }],
+          guards: [
+            { type: "prop", name: "className", value: "text-[--color]" },
+          ],
+        },
+        styles: {
+          epoch: 2,
+          guards: [{ type: "variable", name: "color", value: "blue" }],
+        },
+      },
     ),
   );
 });

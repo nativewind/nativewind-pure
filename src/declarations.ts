@@ -1,69 +1,73 @@
 import { styleFamily } from "./globals";
 import type { ConfigReducerState } from "./reducers/config";
-import type { InlineStyle, RenderGuard, StyleRule } from "./types";
+import type { RenderGuard, StyleRule } from "./types";
 import { Effect } from "./utils/observable";
 
-type A = DeclarationStore;
-
-type C = {
-  [K in keyof DeclarationStore]: DeclarationStore[K];
-};
-
-export class DeclarationStore extends Effect {
-  epoch = 0;
+export type DeclarationStore = {
+  epoch: number;
   normal?: StyleRule[];
   important?: StyleRule[];
   guards?: RenderGuard[];
-
-  constructor(
+  update(
     state: ConfigReducerState,
     props: Record<string, any>,
-    public run: () => void,
-  ) {
-    super(run);
-    this.update(state, props);
-  }
+  ): ConfigReducerState;
+  cleanup(): void;
+};
 
-  update(state: ConfigReducerState, props: Record<string, any>) {
-    this.cleanup();
+export function buildDeclarationStore(
+  state: ConfigReducerState,
+  props: Record<string, any>,
+  run: () => void,
+) {
+  const effect = new Effect(run);
 
-    if (this.epoch > 0) {
-      this.cleanup();
-    }
+  const store: DeclarationStore = {
+    epoch: 0,
+    update(state, props) {
+      store.cleanup();
 
-    const source = props[state.config.source] as string;
-
-    // TODO: Bail early if nothings has changed
-    const normal: StyleRule[] = [];
-    const important: StyleRule[] = [];
-    const guards: RenderGuard[] = [
-      { type: "prop", name: state.config.source, value: source },
-    ];
-
-    for (const className of source.split(/\s+/)) {
-      const styleRuleSet = this.get(styleFamily(className));
-      if (!styleRuleSet) {
-        continue;
+      if (store.epoch > 0) {
+        store.cleanup();
       }
 
-      collectDefinitions(styleRuleSet.n, normal);
-      collectDefinitions(styleRuleSet.i, important);
-    }
+      const source = props[state.config.source] as string;
 
-    this.epoch++;
-    this.normal = normal;
-    this.important = important;
-    this.guards = guards;
+      // TODO: Bail early if nothings has changed
+      const normal: StyleRule[] = [];
+      const important: StyleRule[] = [];
+      const guards: RenderGuard[] = [
+        { type: "prop", name: state.config.source, value: source },
+      ];
 
-    return state;
-  }
+      for (const className of source.split(/\s+/)) {
+        const styleRuleSet = effect.get(styleFamily(className));
+        if (!styleRuleSet) {
+          continue;
+        }
 
-  cleanup() {
-    super.cleanup();
-    this.normal = undefined;
-    this.important = undefined;
-    this.guards = undefined;
-  }
+        collectDefinitions(styleRuleSet.n, normal);
+        collectDefinitions(styleRuleSet.i, important);
+      }
+
+      store.epoch++;
+      store.normal = normal;
+      store.important = important;
+      store.guards = guards;
+
+      return state;
+    },
+    cleanup() {
+      effect.cleanup();
+      store.normal = undefined;
+      store.important = undefined;
+      store.guards = undefined;
+    },
+  };
+
+  store.update(state, props);
+
+  return store;
 }
 
 /**

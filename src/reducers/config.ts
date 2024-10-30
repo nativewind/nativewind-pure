@@ -1,8 +1,8 @@
 import type { Dispatch } from "react";
 import type { ContainerContextValue, VariableContextValue } from "../contexts";
-import { DeclarationStore } from "../declarations";
+import { buildDeclarationStore, type DeclarationStore } from "../declarations";
 import type { InteropReducerAction } from "../reducers/component";
-import { StyleStore } from "../styles";
+import { buildStyleStore, type StyleStore } from "../styles";
 import type {
   ConfigWithKey,
   InlineStyle,
@@ -98,13 +98,13 @@ function updateDefinitions(
   if (!state.declarations) {
     return {
       ...state,
-      declarations: new DeclarationStore(state, props, () => {
+      declarations: buildDeclarationStore(state, props, () => {
         dispatch({
           type: "perform-config-reducer-actions",
           actions: [{ action: { type: "update-definitions" }, key: state.key }],
         });
       }),
-      styles: new StyleStore(() => {
+      styles: buildStyleStore(() => {
         dispatch({
           type: "perform-config-reducer-actions",
           actions: [{ action: { type: "update-styles" }, key: state.key }],
@@ -127,6 +127,10 @@ function updateStyles(
     return state;
   }
 
+  /**
+   * Currently the styles will always be updated, but in the future we can
+   * optimize this to only update when the props have changed.
+   */
   const props = state.styles.update(
     state,
     incomingProps,

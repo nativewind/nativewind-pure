@@ -11,98 +11,110 @@ import type {
 } from "./types";
 import { Effect } from "./utils/observable";
 
-export class StyleStore extends Effect {
-  epoch = 0;
+export type StyleStore = {
+  epoch: number;
   guards?: RenderGuard[];
-
-  constructor(public run: () => void) {
-    super(run);
-  }
-
+  cleanup(): void;
   update(
     state: ConfigReducerState,
     incomingProps: Record<string, unknown>,
     inheritedVariables: VariableContextValue,
     universalVariables: VariableContextValue,
     inheritedContainers: ContainerContextValue,
-  ) {
-    let props: Record<string, any> | undefined;
+  ): Record<string, any> | undefined;
+};
 
-    if (this.epoch > 0) {
-      this.cleanup();
-    }
+export function buildStyleStore(run: () => void) {
+  const effect = new Effect(run);
 
-    this.epoch++;
-    this.guards = [];
+  const styleStore: StyleStore = {
+    epoch: 0,
+    cleanup(): void {
+      effect.cleanup();
+      styleStore.guards = undefined;
+    },
+    update(
+      state: ConfigReducerState,
+      incomingProps: Record<string, unknown>,
+      inheritedVariables: VariableContextValue,
+      universalVariables: VariableContextValue,
+      inheritedContainers: ContainerContextValue,
+    ) {
+      let props: Record<string, any> | undefined;
 
-    const delayedStyles: Callback[] = [];
-
-    const resolveOptions: ResolveOptions = {
-      getProp: (name: string) => {
-        this.guards?.push({
-          type: "prop",
-          name: name,
-          value: incomingProps[name],
-        });
-        return incomingProps[name] as StyleValueDescriptor;
-      },
-      getVariable: (name: string) => {
-        let value: StyleValueDescriptor;
-
-        value ??=
-          universalVariables instanceof Map
-            ? universalVariables.get(name)
-            : universalVariables?.[name];
-
-        value ??=
-          inheritedVariables instanceof Map
-            ? inheritedVariables.get(name)
-            : inheritedVariables?.[name];
-
-        this.guards?.push({ type: "variable", name: name, value });
-
-        return value;
-      },
-      getContainer: (name: string) => {
-        const value = inheritedContainers[name];
-        this.guards?.push({ type: "container", name: name, value });
-        return value;
-      },
-    };
-
-    if (state.declarations?.normal) {
-      props = applyStyles(
-        props,
-        state.declarations?.normal,
-        state,
-        delayedStyles,
-        resolveOptions,
-      );
-    }
-
-    if (state.declarations?.important) {
-      props = applyStyles(
-        props,
-        state.declarations?.important,
-        state,
-        delayedStyles,
-        resolveOptions,
-      );
-    }
-
-    if (delayedStyles.length) {
-      for (const delayedStyle of delayedStyles) {
-        delayedStyle();
+      if (styleStore.epoch > 0) {
+        styleStore.cleanup();
       }
-    }
 
-    return props;
-  }
+      styleStore.epoch++;
+      styleStore.guards = [];
 
-  cleanup(): void {
-    super.cleanup();
-    this.guards = undefined;
-  }
+      const delayedStyles: Callback[] = [];
+
+      const resolveOptions: ResolveOptions = {
+        getProp: (name: string) => {
+          styleStore.guards?.push({
+            type: "prop",
+            name: name,
+            value: incomingProps[name],
+          });
+          return incomingProps[name] as StyleValueDescriptor;
+        },
+        getVariable: (name: string) => {
+          let value: StyleValueDescriptor;
+
+          value ??=
+            universalVariables instanceof Map
+              ? universalVariables.get(name)
+              : universalVariables?.[name];
+
+          value ??=
+            inheritedVariables instanceof Map
+              ? inheritedVariables.get(name)
+              : inheritedVariables?.[name];
+
+          styleStore.guards?.push({ type: "variable", name: name, value });
+
+          return value;
+        },
+        getContainer: (name: string) => {
+          const value = inheritedContainers[name];
+          styleStore.guards?.push({ type: "container", name: name, value });
+          return value;
+        },
+      };
+
+      if (state.declarations?.normal) {
+        props = applyStyles(
+          props,
+          state.declarations?.normal,
+          state,
+          delayedStyles,
+          resolveOptions,
+        );
+      }
+
+      if (state.declarations?.important) {
+        props = applyStyles(
+          props,
+          state.declarations?.important,
+          state,
+          delayedStyles,
+          resolveOptions,
+        );
+      }
+
+      if (delayedStyles.length) {
+        for (const delayedStyle of delayedStyles) {
+          delayedStyle();
+        }
+      }
+
+      return props;
+    },
+  };
+
+  return styleStore;
 }
 
 function applyStyles(

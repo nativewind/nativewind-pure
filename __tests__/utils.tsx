@@ -121,11 +121,11 @@ export function resultHelper(
         const config = { ...value, ...partial };
 
         if (declarations && config.declarations) {
-          Object.assign(config.declarations, declarations);
+          config.declarations = { ...config.declarations, ...declarations };
         }
 
         if (styles && config.styles) {
-          Object.assign(config.styles, styles);
+          config.styles = { ...config.styles, ...styles };
         }
 
         return [key, config];
