@@ -9,7 +9,7 @@ import type {
   StyleRule,
   StyleValueDescriptor,
 } from "./types";
-import { Effect, type Mutable, type Observable } from "./utils/observable";
+import { Effect } from "./utils/observable";
 
 export type Styles = Effect & {
   epoch: number;
