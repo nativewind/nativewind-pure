@@ -1,19 +1,20 @@
 import { useContext, useDebugValue, useEffect, useReducer } from "react";
 import type { ComponentType, Dispatch } from "react";
 import type { ContainerContextValue, VariableContextValue } from "../contexts";
-import type {
-  InteropReducerAction,
-  InteropReducerState,
-  PerformConfigReducerAction,
-} from "../reducers/component";
-import type { ConfigReducerState } from "../reducers/config";
-import type { Config, ConfigStates } from "../types";
 import {
   ContainerContext,
   UniversalVariableContext,
   VariableContext,
 } from "../contexts";
+import type {
+  InteropReducerAction,
+  InteropReducerState,
+  PerformConfigReducerAction,
+} from "../reducers/component";
 import { buildInteropReducer, initInteropReducer } from "../reducers/component";
+import type { ConfigReducerState } from "../reducers/config";
+import type { Config, ConfigStates } from "../types";
+import { cleanupEffect } from "../utils/observable";
 
 export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
   const configStates: ConfigStates = {};
@@ -113,8 +114,8 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
       return () => {
         for (const key in state.configStates) {
           const configState = state.configStates[key];
-          configState.declarations?.cleanup();
-          configState.styles?.cleanup();
+          cleanupEffect(configState.declarations);
+          cleanupEffect(configState.styles);
         }
       };
     }, []);
@@ -198,3 +199,21 @@ function dispatchRerenderActions(
     dispatch({ type: "perform-config-reducer-actions", actions });
   }
 }
+
+/**
+ * https://drafts.csswg.org/selectors/#specificity-rules
+ *
+ * This is a holey array. See SpecificityIndex to know what each index represents.
+ */
+export type Specificity = SpecificityValue[];
+export type SpecificityValue = number | undefined;
+
+export const SpecificityIndex = {
+  Order: 0,
+  ClassName: 1,
+  Important: 2,
+  Inline: 3,
+  PseudoElements: 4,
+  // Id: 0, - We don't support ID yet
+  // StyleSheet: 0, - We don't support multiple stylesheets
+};

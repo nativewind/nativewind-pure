@@ -1,73 +1,59 @@
 import { styleFamily } from "./globals";
 import type { ConfigReducerState } from "./reducers/config";
 import type { RenderGuard, StyleRule } from "./types";
-import { Effect } from "./utils/observable";
+import type { Effect, Mutable, Observable } from "./utils/observable";
 
-export type DeclarationStore = {
+export type Declarations = Effect & {
   epoch: number;
-  normal?: StyleRule[];
-  important?: StyleRule[];
-  guards?: RenderGuard[];
-  update(
-    state: ConfigReducerState,
-    props: Record<string, any>,
-  ): ConfigReducerState;
-  cleanup(): void;
+  normal: StyleRule[];
+  important: StyleRule[];
+  guards: RenderGuard[];
 };
 
-export function buildDeclarationStore(
+export function buildDeclarations(
   state: ConfigReducerState,
   props: Record<string, any>,
   run: () => void,
-) {
-  const effect = new Effect(run);
+): Declarations {
+  let didUpdate = false;
+  const previous = state.declarations;
+  const source = props[state.config.source] as string;
 
-  const store: DeclarationStore = {
-    epoch: 0,
-    update(state, props) {
-      store.cleanup();
-
-      if (store.epoch > 0) {
-        store.cleanup();
-      }
-
-      const source = props[state.config.source] as string;
-
-      // TODO: Bail early if nothings has changed
-      const normal: StyleRule[] = [];
-      const important: StyleRule[] = [];
-      const guards: RenderGuard[] = [
-        { type: "prop", name: state.config.source, value: source },
-      ];
-
-      for (const className of source.split(/\s+/)) {
-        const styleRuleSet = effect.get(styleFamily(className));
-        if (!styleRuleSet) {
-          continue;
-        }
-
-        collectDefinitions(styleRuleSet.n, normal);
-        collectDefinitions(styleRuleSet.i, important);
-      }
-
-      store.epoch++;
-      store.normal = normal;
-      store.important = important;
-      store.guards = guards;
-
-      return state;
-    },
-    cleanup() {
-      effect.cleanup();
-      store.normal = undefined;
-      store.important = undefined;
-      store.guards = undefined;
+  const next: Declarations = {
+    epoch: previous ? previous.epoch : 0,
+    normal: [],
+    important: [],
+    guards: [{ type: "prop", name: state.config.source, value: source }],
+    run,
+    dependencies: new Set(),
+    get(readable) {
+      return readable.get(next);
     },
   };
 
-  store.update(state, props);
+  for (const className of source.split(/\s+/)) {
+    const styleRuleSet = next.get(styleFamily(className));
+    if (!styleRuleSet) {
+      continue;
+    }
 
-  return store;
+    didUpdate ||= collectDefinitions(
+      styleRuleSet.n,
+      next.normal,
+      previous?.normal,
+    );
+    didUpdate ||= collectDefinitions(
+      styleRuleSet.i,
+      next.important,
+      previous?.important,
+    );
+  }
+
+  if (didUpdate) {
+    next.epoch++;
+  }
+
+  return next;
 }
 
 /**
@@ -79,27 +65,13 @@ export function buildDeclarationStore(
 function collectDefinitions(
   styleRules: StyleRule[] | undefined,
   collection: StyleRule[],
+  previous?: StyleRule[],
 ) {
-  if (!styleRules) return;
+  if (!styleRules) return previous !== undefined;
+
   for (const styleRule of styleRules) {
     collection.push(styleRule);
   }
+
+  return true;
 }
-
-/**
- * https://drafts.csswg.org/selectors/#specificity-rules
- *
- * This is a holey array. See SpecificityIndex to know what each index represents.
- */
-export type Specificity = SpecificityValue[];
-export type SpecificityValue = number | undefined;
-
-export const SpecificityIndex = {
-  Order: 0,
-  ClassName: 1,
-  Important: 2,
-  Inline: 3,
-  PseudoElements: 4,
-  // Id: 0, - We don't support ID yet
-  // StyleSheet: 0, - We don't support multiple stylesheets
-};

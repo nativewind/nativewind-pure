@@ -14,7 +14,7 @@ import {
   type VariableContextValue,
 } from "../src";
 import type { DeclarationStore } from "../src/declarations";
-import type { StyleStore } from "../src/styles";
+import type { Styles } from "../src/styles";
 import { observable } from "../src/utils/observable";
 
 jest.mock("react-native", () => {
@@ -94,7 +94,7 @@ type ConfigReducerStateWithoutClasses = Omit<
   ConfigReducerState,
   "declarations" | "styles"
 > & {
-  styles?: { [key in keyof StyleStore]?: StyleStore[key] };
+  styles?: { [key in keyof Styles]?: Styles[key] };
   declarations?: {
     [key in keyof DeclarationStore]?: DeclarationStore[key];
   };

@@ -1,10 +1,12 @@
-export type Observable<Value, Args extends unknown[]> = {
+export type Observable<Value = unknown, Args extends unknown[] = never[]> = {
   // Used for debugging only
   name?: string;
   // Get the current value of the observable. If you provide an Effect, it will be subscribed to the observable.
   get(effect?: Effect): Value;
   // Set the value and rerun all subscribed Effects
   set(...value: Args): void;
+  // Remove the effect from the observable
+  remove(effect: Effect): void;
   // Set, but add the effects to a batch to be run later
   batch(batch: Set<Effect>, ...value: Args): void;
 };
@@ -44,7 +46,7 @@ export function observable<Value, Args extends unknown[]>(
 
   const isReadOnly = typeof read === "function" && !write;
 
-  return {
+  const obs: Observable<Value, Args> = {
     get(effect) {
       /**
        * Observables with read functions are lazy and only run the read function once.
@@ -65,7 +67,7 @@ export function observable<Value, Args extends unknown[]>(
        */
       if (effect && !isReadOnly) {
         effects.add(effect);
-        effect.dependencies.add(() => effects.delete(effect));
+        effect.dependencies.add(obs);
       }
 
       return value as Value;
@@ -74,7 +76,7 @@ export function observable<Value, Args extends unknown[]>(
      * Sets the value of the observable and immediately runs all subscribed effects.
      * If you are setting multiple observables in succession, use batch() instead.
      */
-    set(...args: [Value] | Args) {
+    set(...args) {
       value =
         typeof write === "function"
           ? write(
@@ -89,13 +91,16 @@ export function observable<Value, Args extends unknown[]>(
         effect.run();
       }
     },
+    remove(effect) {
+      effects.delete(effect);
+    },
     /**
      * batch() accepts a Set<Effect> and instead of running the effects immediately,
      * it will add them to the Set.
      *
      * It it up to the caller to run the effects in the Set.
      */
-    batch(batch, ...args: [Value] | Args) {
+    batch(batch, ...args) {
       value =
         typeof write === "function"
           ? write(
@@ -111,6 +116,8 @@ export function observable<Value, Args extends unknown[]>(
       }
     },
   };
+
+  return obs;
 }
 
 /**
@@ -141,20 +148,21 @@ export function mutable<Value>(value?: Value): Mutable<Value> {
  */
 export class Effect {
   constructor(public run: () => void) {}
-  public dependencies = new Set<() => void>();
+  public dependencies = new Set<Observable<any, any[]>>();
 
   get<Value, Args extends unknown[]>(
     readable: Observable<Value, Args> | Mutable<Value>,
   ) {
     return readable.get(this);
   }
+}
 
-  cleanup() {
-    for (const dep of this.dependencies) {
-      dep();
-    }
-    this.dependencies.clear();
+export function cleanupEffect(effect?: Effect) {
+  if (!effect) return;
+  for (const dep of effect.dependencies) {
+    dep.remove(effect);
   }
+  effect.dependencies.clear();
 }
 
 /**

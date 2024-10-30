@@ -1,14 +1,15 @@
 import type { Dispatch } from "react";
 import type { ContainerContextValue, VariableContextValue } from "../contexts";
-import { buildDeclarationStore, type DeclarationStore } from "../declarations";
+import { buildDeclarations, type Declarations } from "../declarations";
 import type { InteropReducerAction } from "../reducers/component";
-import { buildStyleStore, type StyleStore } from "../styles";
+import { buildStyles, type Styles } from "../styles";
 import type {
   ConfigWithKey,
   InlineStyle,
   SideEffectTrigger,
   StyleValueDescriptor,
 } from "../types";
+import { cleanupEffect } from "../utils/observable";
 
 export type ConfigReducerState = Readonly<{
   // The key of the config, used to group props, variables, containers, etc.
@@ -18,8 +19,8 @@ export type ConfigReducerState = Readonly<{
   source?: string | null | undefined;
   target?: Record<string, unknown> | null | undefined;
 
-  declarations?: DeclarationStore;
-  styles?: StyleStore;
+  declarations?: Declarations;
+  styles?: Styles;
 
   // The props produced by the config
   props?: Record<string, unknown>;
@@ -57,6 +58,7 @@ export function configReducer(
         ? state
         : updateStyles(
             nextState,
+            dispatch,
             incomingProps,
             inheritedVariables,
             universalVariables,
@@ -66,6 +68,7 @@ export function configReducer(
     case "update-styles": {
       return updateStyles(
         state,
+        dispatch,
         incomingProps,
         inheritedVariables,
         universalVariables,
@@ -95,49 +98,68 @@ function updateDefinitions(
     return state;
   }
 
-  if (!state.declarations) {
-    return {
-      ...state,
-      declarations: buildDeclarationStore(state, props, () => {
-        dispatch({
-          type: "perform-config-reducer-actions",
-          actions: [{ action: { type: "update-definitions" }, key: state.key }],
-        });
-      }),
-      styles: buildStyleStore(() => {
-        dispatch({
-          type: "perform-config-reducer-actions",
-          actions: [{ action: { type: "update-styles" }, key: state.key }],
-        });
-      }),
-    };
+  const previous = state.declarations;
+  let next = buildDeclarations(state, props, () => {
+    dispatch({
+      type: "perform-config-reducer-actions",
+      actions: [{ action: { type: "update-definitions" }, key: state.key }],
+    });
+  });
+
+  if (next.epoch === previous?.epoch) {
+    /*
+     * If they are the same epoch, then nothing changed.
+     * However, we created a new effect that needs to be cleaned up
+     */
+    cleanupEffect(next);
+    return state;
   }
 
-  return state.declarations.update(state, props);
+  // Clean up the previous effect
+  cleanupEffect(state.declarations);
+
+  return {
+    ...state,
+    declarations: next,
+  };
 }
 
 function updateStyles(
   state: ConfigReducerState,
+  dispatch: Dispatch<InteropReducerAction>,
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
   inheritedContainers: ContainerContextValue,
 ) {
-  if (!state.styles) {
-    return state;
-  }
-
   /**
    * Currently the styles will always be updated, but in the future we can
    * optimize this to only update when the props have changed.
    */
-  const props = state.styles.update(
+  const previous = state.styles;
+  const next = buildStyles(
     state,
     incomingProps,
     inheritedVariables,
     universalVariables,
     inheritedContainers,
+    () => {
+      dispatch({
+        type: "perform-config-reducer-actions",
+        actions: [{ action: { type: "update-styles" }, key: state.key }],
+      });
+    },
   );
 
-  return { ...state, props };
+  if (next.epoch === previous?.epoch) {
+    /*
+     * If they are the same epoch, then nothing changed.
+     * However, we created a new effect that needs to be cleaned up
+     */
+    cleanupEffect(next);
+    return state;
+  }
+
+  cleanupEffect(previous);
+  return { ...state, styles: next, props: next.props };
 }
