@@ -28,7 +28,7 @@ export function buildStyles(
   run: () => void,
 ) {
   const next: Styles = {
-    epoch: state.styles ? state.styles.epoch : 0,
+    epoch: state.styles ? state.styles.epoch : -1,
     guards: [],
     run,
     dependencies: new Set(),

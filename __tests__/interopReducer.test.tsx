@@ -76,7 +76,7 @@ test("basic className", () => {
       },
       {
         declarations: {
-          epoch: 1,
+          epoch: 0,
           normal: [{ d: [{ color: "red" }], s: [0] }],
           guards: [{ type: "prop", name: "className", value: "text-red-500" }],
         },
@@ -133,14 +133,14 @@ test("variables", () => {
       },
       {
         declarations: {
-          epoch: 1,
+          epoch: 0,
           normal: [{ d: [[[{}, "var", ["color"]], "^color", 1]], s: [0] }],
           guards: [
             { type: "prop", name: "className", value: "text-[--color]" },
           ],
         },
         styles: {
-          epoch: 1,
+          epoch: 0,
           guards: [{ type: "variable", name: "color", value: "red" }],
         },
       },
@@ -162,14 +162,14 @@ test("variables", () => {
       },
       {
         declarations: {
-          epoch: 1,
+          epoch: 0,
           normal: [{ d: [[[{}, "var", ["color"]], "^color", 1]], s: [0] }],
           guards: [
             { type: "prop", name: "className", value: "text-[--color]" },
           ],
         },
         styles: {
-          epoch: 2,
+          epoch: 1,
           guards: [{ type: "variable", name: "color", value: "blue" }],
         },
       },
