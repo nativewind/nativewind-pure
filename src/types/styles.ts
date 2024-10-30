@@ -1,6 +1,6 @@
 import type { ConfigReducerState } from "../reducers/config";
 import type { ResolveOptions } from "../resolvers";
-import type { AnimationDescriptor, TransitionDescriptor } from "./animation";
+import type { AnimationProperties, TransitionDescriptor } from "./animation";
 import type {
   AttributeCondition,
   ContainerQuery,
@@ -45,7 +45,7 @@ export interface StyleRule {
    */
 
   // Animations
-  a?: AnimationDescriptor;
+  a?: AnimationProperties;
   // Transitions
   t?: TransitionDescriptor;
 }

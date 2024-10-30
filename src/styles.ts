@@ -6,6 +6,7 @@ import type {
   Callback,
   InlineStyle,
   RenderGuard,
+  SideEffectTrigger,
   StyleRule,
   StyleValueDescriptor,
 } from "./types";
@@ -15,6 +16,7 @@ export type Styles = Effect & {
   epoch: number;
   guards: RenderGuard[];
   props?: Record<string, any>;
+  sideEffects?: SideEffectTrigger[];
 };
 
 export function buildStyles(

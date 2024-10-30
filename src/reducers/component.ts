@@ -120,10 +120,10 @@ export function performConfigReducerActions(
   let nextVariables: Maybe<VariableContextValue>;
   let nextContainers: Maybe<ContainerContextValue>;
   let nextGroupedProps: Maybe<Record<string, Maybe<Record<string, unknown>>>>;
-  let nextSideEffects: Maybe<Record<string, Maybe<SideEffectTrigger[]>>>;
   let nextHoverActions: Maybe<Record<string, Maybe<ConfigReducerAction[]>>>;
   let nextActiveActions: Maybe<Record<string, Maybe<ConfigReducerAction[]>>>;
   let nextFocusActions: Maybe<Record<string, Maybe<ConfigReducerAction[]>>>;
+  let nextSideEffects: Maybe<Record<string, Maybe<SideEffectTrigger[]>>>;
 
   /**
    * This reducer's state is used as the props for multiple components/hooks.
@@ -179,10 +179,28 @@ export function performConfigReducerActions(
       Object.assign(nextContainers, nextConfigState.containers);
     }
 
-    // Did side effects change?
-    if (!Object.is(configState.sideEffects, nextConfigState.sideEffects)) {
+    // Did declaration side effects change?
+    if (
+      !Object.is(
+        configState.declarations?.sideEffects,
+        configState.declarations?.sideEffects,
+      )
+    ) {
       nextSideEffects ??= {};
-      nextSideEffects[nextConfigState.key] = nextConfigState.sideEffects;
+      nextSideEffects[`$d:${nextConfigState.key}`] =
+        nextConfigState.declarations?.sideEffects;
+    }
+
+    // Did style side effects change?
+    if (
+      !Object.is(
+        configState.styles?.sideEffects,
+        configState.styles?.sideEffects,
+      )
+    ) {
+      nextSideEffects ??= {};
+      nextSideEffects[`$s:${nextConfigState.key}`] =
+        nextConfigState.styles?.sideEffects;
     }
 
     // Did hover actions change?
@@ -209,15 +227,19 @@ export function performConfigReducerActions(
     return state;
   }
 
+  const sideEffects = nextSideEffects
+    ? { ...nextSideEffects }
+    : state.sideEffects;
+
   // Update the render tree, this will inject the context providers / animated types
   return updateRenderTree(
     state,
     Object.assign({}, state.configStates, updatedStates),
     nextVariables ?? state.variables,
     nextContainers ?? state.containers,
-    nextSideEffects ?? state.sideEffects,
     nextHoverActions ?? state.hoverActions,
     nextActiveActions ?? state.activeActions,
     nextFocusActions ?? state.focusActions,
+    sideEffects,
   );
 }

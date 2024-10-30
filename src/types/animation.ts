@@ -2,24 +2,24 @@
  * Animations
  */
 
-import type { EasingFunction, Time } from "lightningcss";
+import type {
+  Animation as CSSAnimation,
+  EasingFunction,
+  Time,
+} from "lightningcss";
 import type { SharedValue } from "react-native-reanimated";
 import type { StyleValueDescriptor } from "./styles";
 
 type AnimationPropertyKey = string;
 export type AnimationStep = number | [number, EasingFunction];
 export type AnimationFrame = [AnimationPropertyKey, RuntimeValueFrame[]];
-export type AnimationDescriptor = {
+export type AnimationProperties = {
   [K in keyof CSSAnimation]?: CSSAnimation[K][];
 };
 export interface Animation {
   frames: AnimationFrame[];
-  /**
-   * The easing function for each frame
-   */
+  // The easing function for each frame
   steps: AnimationStep[];
-  requiresLayoutWidth?: boolean;
-  requiresLayoutHeight?: boolean;
 }
 export interface RuntimeValueFrame {
   progress: number;

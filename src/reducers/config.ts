@@ -26,8 +26,6 @@ export type ConfigReducerState = Readonly<{
   variables?: Record<string, StyleValueDescriptor>;
   // The containers produced by the config
   containers?: Record<string, unknown>;
-  // The side effects produced by the config
-  sideEffects?: SideEffectTrigger[];
   // The hover actions produced by the config
   hoverActions?: ConfigReducerAction[];
   // The active actions produced by the config
@@ -51,7 +49,11 @@ export function configReducer(
 ) {
   switch (action.type) {
     case "update-definitions": {
-      const nextState = updateDefinitions(state, dispatch, incomingProps);
+      let nextState = updateDefinitions(state, dispatch, incomingProps);
+      if (Object.is(state, nextState)) {
+        return state;
+      }
+
       return Object.is(state, nextState)
         ? state
         : updateStyles(

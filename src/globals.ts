@@ -1,6 +1,6 @@
 import { Appearance, Dimensions } from "react-native";
 import type { ColorSchemeName, LayoutRectangle } from "react-native";
-import type { StyleRuleSet, StyleValueDescriptor } from "./types";
+import type { Animation, StyleRuleSet, StyleValueDescriptor } from "./types";
 import { isDeepEqual } from "./utils/equality";
 import { family, mutable, observable, weakFamily } from "./utils/observable";
 
@@ -14,14 +14,16 @@ export const styleFamily = family(() => {
     : observable<StyleRuleSet>(undefined, undefined, isDeepEqual);
 });
 
-/**
- * In development, these are observable to allow for hot-reloading.
- * In production these will be static StyleValueDescriptors.
- */
 export const variableFamily = family(() => {
   return process.env.NODE_ENV === "production"
     ? mutable<StyleValueDescriptor>(undefined, isDeepEqual)
     : observable<StyleValueDescriptor>(undefined, undefined, isDeepEqual);
+});
+
+export const animationFamily = family(() => {
+  return process.env.NODE_ENV === "production"
+    ? mutable<Animation>(undefined, isDeepEqual)
+    : observable<Animation>(undefined, undefined, isDeepEqual);
 });
 
 export const rem = observable(14);

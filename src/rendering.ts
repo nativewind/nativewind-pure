@@ -5,16 +5,16 @@ export function updateRenderTree(
   configStates: ComponentReducerState["configStates"],
   variables: ComponentReducerState["variables"],
   containers: ComponentReducerState["containers"],
-  sideEffects: ComponentReducerState["sideEffects"],
   hoverActions: ComponentReducerState["hoverActions"],
   activeActions: ComponentReducerState["activeActions"],
   focusActions: ComponentReducerState["focusActions"],
+  sideEffects: ComponentReducerState["sideEffects"],
 ) {
   let props = {};
 
   for (const key in configStates) {
     const configState = configStates[key];
-    Object.assign(props, configState.props);
+    Object.assign(props, configState.styles?.props);
   }
 
   return {
