@@ -1,13 +1,9 @@
 import type { ComponentType, Dispatch, Reducer } from "react";
-
-import {
-  type ConfigReducerAction,
-  type ConfigReducerState,
-  configReducer,
-} from "./configReducer";
-import type { ContainerContextValue, VariableContextValue } from "./contexts";
-import { updateRenderTree } from "./renderTree";
-import type { ConfigStates, Maybe, SideEffectTrigger } from "./types";
+import type { ContainerContextValue, VariableContextValue } from "../contexts";
+import type { ConfigStates, Maybe, SideEffectTrigger } from "../types";
+import type { ConfigReducerAction, ConfigReducerState } from "./config";
+import { updateRenderTree } from "../rendering";
+import { configReducer } from "./config";
 
 export type InteropReducerState = Readonly<{
   key: object;
@@ -57,7 +53,7 @@ export function buildInteropReducer(
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
-  inheritedContainers: ContainerContextValue
+  inheritedContainers: ContainerContextValue,
 ): InteropReducer {
   return (state, action) => {
     switch (action.type) {
@@ -68,7 +64,7 @@ export function buildInteropReducer(
           incomingProps,
           inheritedVariables,
           universalVariables,
-          inheritedContainers
+          inheritedContainers,
         );
       }
     }
@@ -83,7 +79,7 @@ export function initInteropReducer(
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
-  inheritedContainers: ContainerContextValue
+  inheritedContainers: ContainerContextValue,
 ): InteropReducerState {
   return Object.assign(
     { key: {}, type, baseType: type, dispatch },
@@ -93,8 +89,8 @@ export function initInteropReducer(
       incomingProps,
       inheritedVariables,
       universalVariables,
-      inheritedContainers
-    )
+      inheritedContainers,
+    ),
   );
 }
 
@@ -104,7 +100,7 @@ export function performConfigReducerActions(
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
-  inheritedContainers: ContainerContextValue
+  inheritedContainers: ContainerContextValue,
 ): InteropReducerState {
   let updatedStates: Maybe<ConfigStates>;
   let nextVariables: Maybe<VariableContextValue>;
@@ -130,7 +126,7 @@ export function performConfigReducerActions(
       incomingProps,
       inheritedVariables,
       universalVariables,
-      inheritedContainers
+      inheritedContainers,
     );
 
     /**
@@ -208,6 +204,6 @@ export function performConfigReducerActions(
     nextSideEffects ?? state.sideEffects,
     nextHoverActions ?? state.hoverActions,
     nextActiveActions ?? state.activeActions,
-    nextFocusActions ?? state.focusActions
+    nextFocusActions ?? state.focusActions,
   );
 }

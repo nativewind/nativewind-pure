@@ -1,11 +1,7 @@
-import {
-  Appearance,
-  Dimensions,
-  type ColorSchemeName,
-  type LayoutRectangle,
-} from "react-native";
-import { observable, weakFamily, family, mutable } from "./observable";
+import { Appearance, Dimensions } from "react-native";
+import type { ColorSchemeName, LayoutRectangle } from "react-native";
 import type { StyleRuleSet, StyleValueDescriptor } from "./types";
+import { family, mutable, observable, weakFamily } from "./utils/observable";
 
 /**
  * In development, these are observable to allow for hot-reloading.
@@ -65,7 +61,7 @@ export const appColorScheme = observable(
   (set, value: ColorSchemeName) => {
     set(systemColorScheme, value);
     return value === undefined ? Appearance.getColorScheme() : value;
-  }
+  },
 );
 
 /**

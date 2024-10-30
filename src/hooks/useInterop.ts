@@ -1,27 +1,19 @@
-import {
-  useContext,
-  useDebugValue,
-  useEffect,
-  useReducer,
-  type ComponentType,
-  type Dispatch,
-} from "react";
-import {
-  buildInteropReducer,
-  initInteropReducer,
-  type InteropReducerAction,
-  type InteropReducerState,
-  type PerformConfigReducerAction,
-} from "./interopReducer";
+import { useContext, useDebugValue, useEffect, useReducer } from "react";
+import type { ComponentType, Dispatch } from "react";
+import type { ContainerContextValue, VariableContextValue } from "../contexts";
+import type {
+  InteropReducerAction,
+  InteropReducerState,
+  PerformConfigReducerAction,
+} from "../reducers/component";
+import type { ConfigReducerState } from "../reducers/config";
+import type { Config, ConfigStates } from "../types";
 import {
   ContainerContext,
   UniversalVariableContext,
   VariableContext,
-  type ContainerContextValue,
-  type VariableContextValue,
-} from "./contexts";
-import type { Config, ConfigStates } from "./types";
-import type { ConfigReducerState } from "./configReducer";
+} from "../contexts";
+import { buildInteropReducer, initInteropReducer } from "../reducers/component";
 
 export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
   const configStates: ConfigStates = {};
@@ -57,7 +49,7 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
         props,
         inheritedVariables,
         universalVariables,
-        inheritedContainers
+        inheritedContainers,
       ),
       undefined,
       () => {
@@ -77,9 +69,9 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
           props,
           inheritedVariables,
           universalVariables,
-          inheritedContainers
+          inheritedContainers,
         );
-      }
+      },
     );
 
     /**
@@ -94,7 +86,7 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
       dispatch,
       props,
       inheritedVariables,
-      inheritedContainers
+      inheritedContainers,
     );
 
     /**
@@ -138,7 +130,7 @@ function dispatchRerenderActions(
   dispatch: Dispatch<InteropReducerAction>,
   props: Record<string, unknown>,
   variables: VariableContextValue,
-  containers: ContainerContextValue
+  containers: ContainerContextValue,
 ) {
   const declarationSet = new Set<ConfigReducerState>();
   const styleSet = new Set<ConfigReducerState>();
@@ -162,7 +154,7 @@ function dispatchRerenderActions(
           default:
             guard satisfies never;
         }
-      }
+      },
     );
 
     if (shouldRerenderDeclarations) {

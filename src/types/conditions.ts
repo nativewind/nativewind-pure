@@ -1,8 +1,8 @@
 import type {
   ContainerCondition,
+  MediaQuery as CSSMediaQuery,
   Declaration,
   SelectorComponent,
-  MediaQuery as CSSMediaQuery,
 } from "lightningcss";
 
 export type MediaQuery = CSSMediaQuery;

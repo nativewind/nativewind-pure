@@ -1,4 +1,4 @@
-import type { InteropReducerState } from "./interopReducer";
+import type { InteropReducerState } from "./reducers/component";
 
 export function updateRenderTree(
   previousState: InteropReducerState,
@@ -8,7 +8,7 @@ export function updateRenderTree(
   sideEffects: InteropReducerState["sideEffects"],
   hoverActions: InteropReducerState["hoverActions"],
   activeActions: InteropReducerState["activeActions"],
-  focusActions: InteropReducerState["focusActions"]
+  focusActions: InteropReducerState["focusActions"],
 ) {
   let props = {};
 

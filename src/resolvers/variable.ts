@@ -4,7 +4,7 @@ export const resolveVariable: StyleValueSubResolver<RuntimeFunction> = (
   resolveValue,
   state,
   func,
-  options
+  options,
 ) => {
   const args = func[2];
   if (!args || !args[0]) return;

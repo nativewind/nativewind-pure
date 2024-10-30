@@ -1,4 +1,7 @@
-import type { Specificity } from "../specificity";
+import type { Specificity } from "../declarations";
+import type { ConfigReducerState } from "../reducers/config";
+import type { ResolveOptions } from "../resolvers";
+import type { AnimationDescriptor, TransitionDescriptor } from "./animation";
 import type {
   AttributeCondition,
   ContainerQuery,
@@ -6,9 +9,6 @@ import type {
   PseudoClassesQuery,
 } from "./conditions";
 import type { Container } from "./container";
-import type { AnimationDescriptor, TransitionDescriptor } from "./animation";
-import type { ConfigReducerState } from "../configReducer";
-import type { ResolveOptions } from "../resolvers";
 
 export interface StyleRuleSet {
   // [StyleRuleSetSymbol]: true;
@@ -75,18 +75,18 @@ export type StyleValueDescriptor =
 export type RuntimeFunction =
   | [
       Record<never, never>,
-      string // string
-    ]
-  | [
-      Record<never, never>,
       string, // string
-      undefined | StyleValueDescriptor[] // arguments
     ]
   | [
       Record<never, never>,
       string, // string
       undefined | StyleValueDescriptor[], // arguments
-      1 // Should process after styles have been calculated
+    ]
+  | [
+      Record<never, never>,
+      string, // string
+      undefined | StyleValueDescriptor[], // arguments
+      1, // Should process after styles have been calculated
     ];
 
 export type InlineStyle =
@@ -98,12 +98,12 @@ export type InlineStyle =
 export type StyleValueResolver = (
   state: ConfigReducerState,
   value: unknown,
-  options: ResolveOptions
+  options: ResolveOptions,
 ) => any;
 
 export type StyleValueSubResolver<T = unknown> = (
   resolveValue: StyleValueResolver,
   state: ConfigReducerState,
   value: T,
-  options: ResolveOptions
+  options: ResolveOptions,
 ) => any;

@@ -51,7 +51,7 @@ export const resolveValue: StyleValueResolver = (state, value, options) => {
         resolveValue,
         state,
         value as RuntimeFunction,
-        options
+        options,
       );
 
       return options.castToArray && value && !Array.isArray(value)
@@ -62,7 +62,7 @@ export const resolveValue: StyleValueResolver = (state, value, options) => {
 };
 
 function isDescriptorArray(
-  value: StyleValueDescriptor | StyleValueDescriptor[]
+  value: StyleValueDescriptor | StyleValueDescriptor[],
 ): value is StyleValueDescriptor[] {
   if (Array.isArray(value)) {
     /**

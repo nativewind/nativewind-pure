@@ -15,7 +15,7 @@ type Write<Value, Args extends unknown[]> = (
   ...args: Args
 ) => Value;
 type Getter = <Value, Args extends unknown[]>(
-  observable: Observable<Value, Args>
+  observable: Observable<Value, Args>,
 ) => Value;
 type Setter = <Value, Args extends unknown[]>(
   observable: Observable<Value, Args>,
@@ -24,10 +24,10 @@ type Setter = <Value, Args extends unknown[]>(
 
 export function observable<Value, Args extends unknown[]>(
   read: Value | Read<Value>,
-  write: Write<Value, Args>
+  write: Write<Value, Args>,
 ): Observable<Value, Args>;
 export function observable<Value>(
-  read: Value | Read<Value>
+  read: Value | Read<Value>,
 ): Observable<Value, [Value]>;
 export function observable<Value>(): Observable<
   Value | undefined,
@@ -35,7 +35,7 @@ export function observable<Value>(): Observable<
 >;
 export function observable<Value, Args extends unknown[]>(
   read?: Value | Read<Value>,
-  write?: Write<Value, Args>
+  write?: Write<Value, Args>,
 ): Observable<Value, Args> {
   const effects = new Set<Effect>();
 
@@ -77,9 +77,12 @@ export function observable<Value, Args extends unknown[]>(
     set(...args: [Value] | Args) {
       value =
         typeof write === "function"
-          ? write((observable, ...args) => {
-              return observable.set(...args);
-            }, ...(args as Args))
+          ? write(
+              (observable, ...args) => {
+                return observable.set(...args);
+              },
+              ...(args as Args),
+            )
           : (args[0] as Value);
 
       for (const effect of effects) {
@@ -95,9 +98,12 @@ export function observable<Value, Args extends unknown[]>(
     batch(batch, ...args: [Value] | Args) {
       value =
         typeof write === "function"
-          ? write((observable, ...args) => {
-              return observable.batch(batch, ...args);
-            }, ...(args as Args))
+          ? write(
+              (observable, ...args) => {
+                return observable.batch(batch, ...args);
+              },
+              ...(args as Args),
+            )
           : (args[1] as Value);
 
       for (const effect of effects) {
@@ -138,7 +144,7 @@ export class Effect {
   public dependencies = new Set<() => void>();
 
   get<Value, Args extends unknown[]>(
-    readable: Observable<Value, Args> | Mutable<Value>
+    readable: Observable<Value, Args> | Mutable<Value>,
   ) {
     return readable.get(this);
   }
@@ -156,29 +162,46 @@ export class Effect {
  */
 export function family<Value>(fn: (name: string) => Value) {
   const map = new Map<string, Value>();
-  return Object.assign(map, (name: string) => {
-    let result = map.get(name);
-    if (!result) {
-      result = fn(name);
-      map.set(name, result);
-    }
-    return result;
-  });
+  return Object.assign(
+    (name: string) => {
+      let result = map.get(name);
+      if (!result) {
+        result = fn(name);
+        map.set(name, result);
+      }
+      return result;
+    },
+    {
+      set(key: string, value: Value) {
+        map.set(key, value);
+      },
+      clear() {
+        map.clear();
+      },
+    },
+  );
 }
 
 /**
  * Utility around WeakMap that creates a new value if it doesn't exist.
  */
 export function weakFamily<Key extends WeakKey, Result>(
-  fn: (key: Key) => Result
+  fn: (key: Key) => Result,
 ) {
   const map = new WeakMap<Key, Result>();
-  return Object.assign(map, (key: Key) => {
-    let value = map.get(key);
-    if (!value) {
-      value = fn(key);
-      map.set(key, value);
-    }
-    return value;
-  });
+  return Object.assign(
+    (key: Key) => {
+      let value = map.get(key);
+      if (!value) {
+        value = fn(key);
+        map.set(key, value);
+      }
+      return value;
+    },
+    {
+      has(key: Key) {
+        return map.has(key);
+      },
+    },
+  );
 }

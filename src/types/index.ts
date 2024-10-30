@@ -1,4 +1,4 @@
-import type { ConfigReducerState } from "../configReducer";
+import type { ConfigReducerState } from "../reducers/config";
 
 export type * from "./animation";
 export type * from "./conditions";
@@ -22,3 +22,8 @@ export type Callback = () => void;
 
 // Side effects are things that cannot be performed during a render. They will be invoked during an useEffect
 export type SideEffectTrigger = Callback;
+
+export type RenderGuard =
+  | { type: "prop"; name: string; value: unknown }
+  | { type: "variable"; name: string; value: unknown }
+  | { type: "container"; name: string; value: unknown };

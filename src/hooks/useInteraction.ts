@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import type { InteropReducerState } from "./interopReducer";
-import { activeFamily, focusFamily, hoverFamily } from "./globals";
+import type { InteropReducerState } from "../reducers/component";
+import { activeFamily, focusFamily, hoverFamily } from "../globals";
 
 type InteractionType =
   | "onHoverIn"
@@ -23,7 +23,7 @@ function buildHandlerFamily() {
 
   return function (
     type: InteractionType,
-    mainHandler: (type: InteractionType, event: unknown) => void
+    mainHandler: (type: InteractionType, event: unknown) => void,
   ) {
     let map = weakMap.get(mainHandler);
 
@@ -47,7 +47,7 @@ export const handlerFamily = buildHandlerFamily();
 
 export function useInteraction(
   state: InteropReducerState,
-  props: Record<string, any>
+  props: Record<string, any>,
 ) {
   /**
    * Any styles that use the hover, active, or focus states would have
@@ -94,7 +94,7 @@ export function useInteraction(
           break;
       }
     },
-    [state, props]
+    [state, props],
   );
 
   return [status, handler] as const;

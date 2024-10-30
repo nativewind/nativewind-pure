@@ -5,7 +5,7 @@ export const resolveRuntimeFunction: StyleValueSubResolver<RuntimeFunction> = (
   resolveValue,
   state,
   func,
-  options
+  options,
 ) => {
   const name = func[1];
   switch (name) {
