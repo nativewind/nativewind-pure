@@ -31,23 +31,33 @@ export function animationSideEffects(
   if (!names.length) return next;
 
   try {
-    const { makeMutable } = require("react-native-reanimated");
+    const { makeMutable, cancelAnimation } = require("react-native-reanimated");
 
-    const sideEffects: SideEffectTrigger[] = [];
-    const sharedValues = previous?.sharedValues || {};
+    let sideEffects: SideEffectTrigger[] = [];
+    const sharedValues: Map<string, AnimationMutable> = new Map();
+    const previousSharedValues = previous?.sharedValues;
+
+    let previousNames: Set<string> | undefined;
+    if (previous?.sharedValues) {
+      previousNames = new Set(previous.sharedValues.keys());
+    }
+
+    let isNone = false;
 
     for (let index = 0; index < names.length; index++) {
       const animationName = names[index];
 
+      // If any animation is set to none, we should cancel all animations
       if (animationName.type === "none") {
-        continue;
+        isNone = true;
+        break;
       }
 
       const name = animationName.value;
-      let mutable = sharedValues[name];
+      let mutable = sharedValues.get(name);
       if (!mutable) {
-        mutable = makeMutable(0);
-        sharedValues[name] = mutable;
+        mutable = makeMutable(0) as AnimationMutable;
+        sharedValues.set(name, mutable);
       }
 
       const animation = next.get(animationFamily(name));
@@ -99,7 +109,36 @@ export function animationSideEffects(
       });
     }
 
+    /**
+     * When cancelling animations, we don't need to cancel animations from this
+     * render, as they haven't started yet. We only need to cancel animations
+     * from the previous render(s).
+     */
+    if (isNone && previousSharedValues) {
+      sideEffects = Array.from(previousSharedValues, (entry) => {
+        // TODO: Setup animation defaults
+        const mutable = entry[1];
+        return () => {
+          mutable.value = 0;
+          cancelAnimation(mutable);
+        };
+      });
+    } else if (previousNames && previousNames.size) {
+      // Cancel any animations that are no longer present
+      sideEffects.push(
+        ...Array.from(previousNames, (name) => {
+          // TODO: Setup animation defaults
+          const mutable = previousSharedValues!.get(name)!;
+          return () => {
+            mutable.value = 0;
+            cancelAnimation(mutable);
+          };
+        }),
+      );
+    }
+
     next.sideEffects = sideEffects;
+    next.sharedValues = sharedValues;
 
     return next;
   } catch {

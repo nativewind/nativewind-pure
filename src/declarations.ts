@@ -19,7 +19,7 @@ export type Declarations = Effect & {
   guards: RenderGuard[];
   animationProperties: AnimationProperties[];
   animation?: AnimationProperties;
-  sharedValues?: Record<string, ReanimatedMutable>;
+  sharedValues?: Map<string, ReanimatedMutable>;
   sideEffects?: SideEffectTrigger[];
 };
 
