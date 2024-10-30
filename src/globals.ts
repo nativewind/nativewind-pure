@@ -1,6 +1,7 @@
 import { Appearance, Dimensions } from "react-native";
 import type { ColorSchemeName, LayoutRectangle } from "react-native";
 import type { StyleRuleSet, StyleValueDescriptor } from "./types";
+import { isDeepEqual } from "./utils/equality";
 import { family, mutable, observable, weakFamily } from "./utils/observable";
 
 /**
@@ -9,8 +10,8 @@ import { family, mutable, observable, weakFamily } from "./utils/observable";
  */
 export const styleFamily = family(() => {
   return process.env.NODE_ENV === "production"
-    ? mutable<StyleRuleSet>()
-    : observable<StyleRuleSet>();
+    ? mutable<StyleRuleSet>(undefined, isDeepEqual)
+    : observable<StyleRuleSet>(undefined, undefined, isDeepEqual);
 });
 
 /**
@@ -19,8 +20,8 @@ export const styleFamily = family(() => {
  */
 export const variableFamily = family(() => {
   return process.env.NODE_ENV === "production"
-    ? mutable<StyleValueDescriptor>()
-    : observable<StyleValueDescriptor>();
+    ? mutable<StyleValueDescriptor>(undefined, isDeepEqual)
+    : observable<StyleValueDescriptor>(undefined, undefined, isDeepEqual);
 });
 
 export const rem = observable(14);

@@ -16,6 +16,7 @@ type Write<Value, Args extends unknown[]> = (
   set: Setter,
   ...args: Args
 ) => Value;
+type Equality<Value> = (left: Value, right: Value) => Boolean;
 type Getter = <Value, Args extends unknown[]>(
   observable: Observable<Value, Args>,
 ) => Value;
@@ -24,9 +25,20 @@ type Setter = <Value, Args extends unknown[]>(
   ...args: Args
 ) => void;
 
+export function observable<Value>(
+  read: undefined,
+  write: undefined,
+  equality?: Equality<Value>,
+): Observable<Value | undefined, never[]>;
+export function observable<Value, Args extends unknown[]>(
+  read: undefined,
+  write?: Write<Value, Args>,
+  equality?: Equality<Value>,
+): Observable<Value | undefined, Args>;
 export function observable<Value, Args extends unknown[]>(
   read: Value | Read<Value>,
   write: Write<Value, Args>,
+  equality?: Equality<Value>,
 ): Observable<Value, Args>;
 export function observable<Value>(
   read: Value | Read<Value>,
@@ -38,6 +50,7 @@ export function observable<Value>(): Observable<
 export function observable<Value, Args extends unknown[]>(
   read?: Value | Read<Value>,
   write?: Write<Value, Args>,
+  equality: Equality<Value> = Object.is,
 ): Observable<Value, Args> {
   const effects = new Set<Effect>();
 
@@ -77,7 +90,7 @@ export function observable<Value, Args extends unknown[]>(
      * If you are setting multiple observables in succession, use batch() instead.
      */
     set(...args) {
-      value =
+      const nextValue =
         typeof write === "function"
           ? write(
               (observable, ...args) => {
@@ -86,6 +99,12 @@ export function observable<Value, Args extends unknown[]>(
               ...(args as Args),
             )
           : (args[0] as Value);
+
+      if (equality(value as Value, nextValue)) {
+        return;
+      }
+
+      value = nextValue;
 
       for (const effect of effects) {
         effect.run();
@@ -101,7 +120,7 @@ export function observable<Value, Args extends unknown[]>(
      * It it up to the caller to run the effects in the Set.
      */
     batch(batch, ...args) {
-      value =
+      const nextValue =
         typeof write === "function"
           ? write(
               (observable, ...args) => {
@@ -110,6 +129,12 @@ export function observable<Value, Args extends unknown[]>(
               ...(args as Args),
             )
           : (args[1] as Value);
+
+      if (equality(value as Value, nextValue)) {
+        return;
+      }
+
+      value = nextValue;
 
       for (const effect of effects) {
         batch.add(effect);
@@ -131,13 +156,22 @@ export type Mutable<Value> = {
 };
 
 export function mutable<Value>(): Mutable<Value | undefined>;
-export function mutable<Value>(value?: Value): Mutable<Value> {
+export function mutable<Value>(
+  value: undefined,
+  equality?: Equality<Value>,
+): Mutable<Value | undefined>;
+export function mutable<Value>(
+  value?: Value,
+  equality: Equality<Value> = Object.is,
+): Mutable<Value> {
   return {
     get() {
       return value as Value;
     },
     set(newValue: Value) {
-      value = newValue;
+      if (!equality(value as Value, newValue)) {
+        value = newValue;
+      }
     },
   };
 }

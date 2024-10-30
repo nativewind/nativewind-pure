@@ -1,4 +1,3 @@
-import type { Specificity } from "../declarations";
 import type { ConfigReducerState } from "../reducers/config";
 import type { ResolveOptions } from "../resolvers";
 import type { AnimationDescriptor, TransitionDescriptor } from "./animation";
@@ -20,7 +19,7 @@ export interface StyleRuleSet {
 
 export interface StyleRule {
   // Specificity
-  s: Specificity;
+  s: any;
   // Declarations
   d?: StyleDeclaration[];
   // Variables
