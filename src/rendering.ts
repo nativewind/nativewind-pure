@@ -1,14 +1,14 @@
-import type { InteropReducerState } from "./reducers/component";
+import type { ComponentReducerState } from "./reducers/component";
 
 export function updateRenderTree(
-  previousState: InteropReducerState,
-  configStates: InteropReducerState["configStates"],
-  variables: InteropReducerState["variables"],
-  containers: InteropReducerState["containers"],
-  sideEffects: InteropReducerState["sideEffects"],
-  hoverActions: InteropReducerState["hoverActions"],
-  activeActions: InteropReducerState["activeActions"],
-  focusActions: InteropReducerState["focusActions"],
+  previousState: ComponentReducerState,
+  configStates: ComponentReducerState["configStates"],
+  variables: ComponentReducerState["variables"],
+  containers: ComponentReducerState["containers"],
+  sideEffects: ComponentReducerState["sideEffects"],
+  hoverActions: ComponentReducerState["hoverActions"],
+  activeActions: ComponentReducerState["activeActions"],
+  focusActions: ComponentReducerState["focusActions"],
 ) {
   let props = {};
 

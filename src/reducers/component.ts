@@ -1,13 +1,13 @@
 import type { ComponentType, Dispatch, Reducer } from "react";
 import type { ContainerContextValue, VariableContextValue } from "../contexts";
+import { updateRenderTree } from "../rendering";
 import type { ConfigStates, Maybe, SideEffectTrigger } from "../types";
 import type { ConfigReducerAction, ConfigReducerState } from "./config";
-import { updateRenderTree } from "../rendering";
 import { configReducer } from "./config";
 
-export type InteropReducerState = Readonly<{
+export type ComponentReducerState = Readonly<{
   key: object;
-  dispatch: Dispatch<InteropReducerAction>;
+  dispatch: Dispatch<ComponentReducerAction>;
   // The type this component will render as
   type: ComponentType;
   // The base component type
@@ -30,7 +30,7 @@ export type InteropReducerState = Readonly<{
   focusActions?: Record<string, ConfigReducerAction[] | undefined>;
 }>;
 
-export type InteropReducerAction =
+export type ComponentReducerAction =
   Readonly<// Perform actions on the configReducer
   {
     type: "perform-config-reducer-actions";
@@ -47,14 +47,17 @@ export type PerformConfigReducerAction_old = Readonly<{
   state: ConfigReducerState;
 }>;
 
-export type InteropReducer = Reducer<InteropReducerState, InteropReducerAction>;
+export type ComponentReducer = Reducer<
+  ComponentReducerState,
+  ComponentReducerAction
+>;
 
-export function buildInteropReducer(
+export function buildComponentReducer(
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
   inheritedContainers: ContainerContextValue,
-): InteropReducer {
+): ComponentReducer {
   return (state, action) => {
     switch (action.type) {
       case "perform-config-reducer-actions": {
@@ -71,20 +74,20 @@ export function buildInteropReducer(
   };
 }
 
-export function initInteropReducer(
-  dispatch: Dispatch<InteropReducerAction>,
+export function initComponentReducer(
+  dispatch: Dispatch<ComponentReducerAction>,
   type: ComponentType,
-  state: Partial<InteropReducerState>,
+  state: Partial<ComponentReducerState>,
   actions: Readonly<PerformConfigReducerAction[]>,
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
   inheritedContainers: ContainerContextValue,
-): InteropReducerState {
+): ComponentReducerState {
   return Object.assign(
     { key: {}, type, baseType: type, dispatch },
     performConfigReducerActions(
-      state as InteropReducerState,
+      state as ComponentReducerState,
       actions,
       incomingProps,
       inheritedVariables,
@@ -95,13 +98,13 @@ export function initInteropReducer(
 }
 
 export function performConfigReducerActions(
-  state: InteropReducerState,
+  state: ComponentReducerState,
   actions: Readonly<PerformConfigReducerAction[]>,
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
   inheritedContainers: ContainerContextValue,
-): InteropReducerState {
+): ComponentReducerState {
   let updatedStates: Maybe<ConfigStates>;
   let nextVariables: Maybe<VariableContextValue>;
   let nextContainers: Maybe<ContainerContextValue>;
@@ -148,9 +151,9 @@ export function performConfigReducerActions(
     updatedStates[nextConfigState.key] = nextConfigState;
 
     // Did the props change?
-    if (!Object.is(configState.props, nextConfigState.props)) {
+    if (!Object.is(configState.styles?.props, nextConfigState.styles?.props)) {
       nextGroupedProps ??= {};
-      nextGroupedProps[nextConfigState.key] = nextConfigState.props;
+      nextGroupedProps[nextConfigState.key] = nextConfigState.styles?.props;
     }
 
     // Did a variable change?

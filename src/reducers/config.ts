@@ -1,7 +1,7 @@
 import type { Dispatch } from "react";
 import type { ContainerContextValue, VariableContextValue } from "../contexts";
 import { buildDeclarations, type Declarations } from "../declarations";
-import type { InteropReducerAction } from "../reducers/component";
+import type { ComponentReducerAction } from "../reducers/component";
 import { buildStyles, type Styles } from "../styles";
 import type {
   ConfigWithKey,
@@ -22,8 +22,6 @@ export type ConfigReducerState = Readonly<{
   declarations?: Declarations;
   styles?: Styles;
 
-  // The props produced by the config
-  props?: Record<string, unknown>;
   // The variables produced by the config
   variables?: Record<string, StyleValueDescriptor>;
   // The containers produced by the config
@@ -45,7 +43,7 @@ export type ConfigReducerAction = Readonly<
 export function configReducer(
   state: ConfigReducerState,
   action: ConfigReducerAction,
-  dispatch: Dispatch<InteropReducerAction>,
+  dispatch: Dispatch<ComponentReducerAction>,
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,
@@ -84,7 +82,7 @@ export function configReducer(
 
 function updateDefinitions(
   state: ConfigReducerState,
-  dispatch: Dispatch<InteropReducerAction>,
+  dispatch: Dispatch<ComponentReducerAction>,
   props: Record<string, unknown>,
 ): ConfigReducerState {
   const source = props[state.config.source] as string;
@@ -126,7 +124,7 @@ function updateDefinitions(
 
 function updateStyles(
   state: ConfigReducerState,
-  dispatch: Dispatch<InteropReducerAction>,
+  dispatch: Dispatch<ComponentReducerAction>,
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
   universalVariables: VariableContextValue,

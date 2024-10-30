@@ -4,16 +4,15 @@ import {
   styleFamily,
   UniversalVariableContext,
   VariableContext,
+  type ComponentReducerState,
   type ConfigReducerState,
-  type ConfigStates,
   type ContainerContextValue,
-  type InteropReducerState,
   type StyleDeclaration,
   type StyleRule,
   type StyleRuleSet,
   type VariableContextValue,
 } from "../src";
-import type { DeclarationStore } from "../src/declarations";
+import type { Declarations } from "../src/declarations";
 import type { Styles } from "../src/styles";
 import { observable } from "../src/utils/observable";
 
@@ -96,12 +95,12 @@ type ConfigReducerStateWithoutClasses = Omit<
 > & {
   styles?: { [key in keyof Styles]?: Styles[key] };
   declarations?: {
-    [key in keyof DeclarationStore]?: DeclarationStore[key];
+    [key in keyof Declarations]?: Declarations[key];
   };
 };
 
 /**
- * The InteropReducerState is a complex object with many optional/internal properties.
+ * The ComponentReducerState is a complex object with many optional/internal properties.
  * This helper function will strip out any undefined values and preserve the internal
  * structures for easier testing.
  * @param result
@@ -110,8 +109,8 @@ type ConfigReducerStateWithoutClasses = Omit<
  * @returns
  */
 export function resultHelper(
-  result: InteropReducerState,
-  partial: Partial<InteropReducerState>,
+  result: ComponentReducerState,
+  partial: Partial<ComponentReducerState>,
   ...configPartials: Partial<ConfigReducerStateWithoutClasses>[]
 ) {
   if (configPartials.length) {
@@ -121,11 +120,14 @@ export function resultHelper(
         const config = { ...value, ...partial };
 
         if (declarations && config.declarations) {
-          config.declarations = { ...config.declarations, ...declarations };
+          config.declarations = {
+            ...config.declarations,
+            ...declarations,
+          } as Declarations;
         }
 
         if (styles && config.styles) {
-          config.styles = { ...config.styles, ...styles };
+          config.styles = { ...config.styles, ...styles } as Styles;
         }
 
         return [key, config];

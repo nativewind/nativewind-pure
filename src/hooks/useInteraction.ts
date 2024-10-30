@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import type { InteropReducerState } from "../reducers/component";
 import { activeFamily, focusFamily, hoverFamily } from "../globals";
+import type { ComponentReducerState } from "../reducers/component";
 
 type InteractionType =
   | "onHoverIn"
@@ -46,7 +46,7 @@ function buildHandlerFamily() {
 export const handlerFamily = buildHandlerFamily();
 
 export function useInteraction(
-  state: InteropReducerState,
+  state: ComponentReducerState,
   props: Record<string, any>,
 ) {
   /**

@@ -7,11 +7,14 @@ import {
   VariableContext,
 } from "../contexts";
 import type {
-  InteropReducerAction,
-  InteropReducerState,
+  ComponentReducerAction,
+  ComponentReducerState,
   PerformConfigReducerAction,
 } from "../reducers/component";
-import { buildInteropReducer, initInteropReducer } from "../reducers/component";
+import {
+  buildComponentReducer,
+  initComponentReducer,
+} from "../reducers/component";
 import type { ConfigReducerState } from "../reducers/config";
 import type { Config, ConfigStates } from "../types";
 import { cleanupEffect } from "../utils/observable";
@@ -46,7 +49,7 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
        * This is a performance de-optimization, but it's better than writing
        * to refs or using side effects.
        */
-      buildInteropReducer(
+      buildComponentReducer(
         props,
         inheritedVariables,
         universalVariables,
@@ -58,12 +61,12 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
          * Generate the initial state for this component by running
          * `update-definitions` for each config
          */
-        return initInteropReducer(
+        return initComponentReducer(
           /*
            * You cannot pass dispatch directly to the reducer,
            * but wrapping it in a function will capture its value.
            */
-          (action: InteropReducerAction) => dispatch(action),
+          (action: ComponentReducerAction) => dispatch(action),
           type,
           initialState,
           initialActions,
@@ -127,8 +130,8 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
 }
 
 function dispatchRerenderActions(
-  state: InteropReducerState,
-  dispatch: Dispatch<InteropReducerAction>,
+  state: ComponentReducerState,
+  dispatch: Dispatch<ComponentReducerAction>,
   props: Record<string, unknown>,
   variables: VariableContextValue,
   containers: ContainerContextValue,
@@ -199,21 +202,3 @@ function dispatchRerenderActions(
     dispatch({ type: "perform-config-reducer-actions", actions });
   }
 }
-
-/**
- * https://drafts.csswg.org/selectors/#specificity-rules
- *
- * This is a holey array. See SpecificityIndex to know what each index represents.
- */
-export type Specificity = SpecificityValue[];
-export type SpecificityValue = number | undefined;
-
-export const SpecificityIndex = {
-  Order: 0,
-  ClassName: 1,
-  Important: 2,
-  Inline: 3,
-  PseudoElements: 4,
-  // Id: 0, - We don't support ID yet
-  // StyleSheet: 0, - We don't support multiple stylesheets
-};
