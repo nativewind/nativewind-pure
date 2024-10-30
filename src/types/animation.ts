@@ -3,6 +3,7 @@
  */
 
 import type { EasingFunction, Time } from "lightningcss";
+import type { SharedValue } from "react-native-reanimated";
 import type { StyleValueDescriptor } from "./styles";
 
 type AnimationPropertyKey = string;
@@ -24,6 +25,13 @@ export interface RuntimeValueFrame {
   progress: number;
   value: StyleValueDescriptor;
 }
+
+type InterpolationIO = [number, number];
+type InterpolationValues = [any, any];
+export type AnimationIO =
+  | [string, undefined]
+  | [string, [InterpolationIO, InterpolationValues], boolean];
+export type SharedValueAnimationIO = [SharedValue<number>, AnimationIO[]];
 
 /**
  * Transitions
@@ -47,3 +55,5 @@ export interface TransitionDescriptor {
    */
   f?: EasingFunction[];
 }
+
+export type TransitionTuple = [string, SharedValue<any>, any];

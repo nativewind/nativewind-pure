@@ -1,7 +1,13 @@
 import type { ComponentType, Dispatch, Reducer } from "react";
 import type { ContainerContextValue, VariableContextValue } from "../contexts";
 import { updateRenderTree } from "../rendering";
-import type { ConfigStates, Maybe, SideEffectTrigger } from "../types";
+import type {
+  ConfigStates,
+  Maybe,
+  SharedValueAnimationIO,
+  SideEffectTrigger,
+  TransitionTuple,
+} from "../types";
 import type { ConfigReducerAction, ConfigReducerState } from "./config";
 import { configReducer } from "./config";
 
@@ -16,8 +22,6 @@ export type ComponentReducerState = Readonly<{
   configStates: Readonly<ConfigStates>;
   // The flattened version of groupedProps
   props?: Record<string, unknown>;
-  // The side effects for each config, grouped by config key
-  sideEffects?: Record<string, SideEffectTrigger[] | undefined>;
   // The variables for each config, grouped by config key
   variables?: VariableContextValue;
   // The containers for each config, grouped by config key
@@ -28,6 +32,13 @@ export type ComponentReducerState = Readonly<{
   activeActions?: Record<string, ConfigReducerAction[] | undefined>;
   // The focus actions for each config, grouped by config key
   focusActions?: Record<string, ConfigReducerAction[] | undefined>;
+  // The side effects for each config, grouped by config key
+  // These are mostly used to control animations
+  sideEffects?: Record<string, SideEffectTrigger[] | undefined>;
+  // Animations
+  animations?: SharedValueAnimationIO[];
+  // Transitions
+  transitions?: TransitionTuple[];
 }>;
 
 export type ComponentReducerAction =

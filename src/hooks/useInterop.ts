@@ -18,6 +18,7 @@ import {
 import type { ConfigReducerState } from "../reducers/config";
 import type { Config, ConfigStates } from "../types";
 import { cleanupEffect } from "../utils/observable";
+import { useAnimation } from "./useAnimation";
 
 export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
   const configStates: ConfigStates = {};
@@ -43,7 +44,7 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
     const universalVariables = useContext(UniversalVariableContext);
     const inheritedContainers = useContext(ContainerContext);
 
-    const [state, dispatch] = useReducer(
+    let [state, dispatch] = useReducer(
       /**
        * Reducers can capture current values, so rebuild the reducer each time
        * This is a performance de-optimization, but it's better than writing
@@ -122,6 +123,12 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
         }
       };
     }, []);
+
+    const animatedProps = useAnimation(state);
+
+    if (state.animations || state.transitions) {
+      state = { ...state, props: { ...state.props, style: animatedProps } };
+    }
 
     useDebugValue(state);
 
