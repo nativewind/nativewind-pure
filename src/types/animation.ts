@@ -12,26 +12,25 @@ import type { StyleValueDescriptor } from "./styles";
 
 type AnimationPropertyKey = string;
 export type AnimationStep = number | [number, EasingFunction];
-export type AnimationFrame = [AnimationPropertyKey, RuntimeValueFrame[]];
+export type AnimationPropertyFrames =
+  | [AnimationPropertyKey, RuntimeValueFrame[]]
+  | [AnimationPropertyKey, RuntimeValueFrame[], true];
 export type AnimationProperties = {
   [K in keyof CSSAnimation]?: CSSAnimation[K][];
 };
-export interface Animation {
-  frames: AnimationFrame[];
+export type RawAnimation = {
+  p: AnimationPropertyFrames[];
   // The easing function for each frame
-  steps: AnimationStep[];
-}
-export interface RuntimeValueFrame {
-  progress: number;
-  value: StyleValueDescriptor;
-}
+  s: AnimationStep[];
+};
+export type Animation = RawAnimation & {
+  defaults: Record<string, any>;
+};
+export type RuntimeValueFrame = [number, StyleValueDescriptor];
 
-type InterpolationIO = [number, number];
-type InterpolationValues = [any, any];
-export type AnimationIO =
-  | [string, undefined]
-  | [string, [InterpolationIO, InterpolationValues], boolean];
-export type SharedValueAnimationIO = [SharedValue<number>, AnimationIO[]];
+export type AnimationIO = Readonly<[number[], any[]]>;
+export type AnimationPropIO = [string | string[], AnimationIO, boolean];
+export type SharedValueAnimationIO = [SharedValue<number>, AnimationPropIO[]];
 
 /**
  * Transitions

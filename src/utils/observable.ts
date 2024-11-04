@@ -29,7 +29,7 @@ export function observable<Value>(
   read: undefined,
   write: undefined,
   equality?: Equality<Value>,
-): Observable<Value | undefined, never[]>;
+): Observable<Value | undefined, [Value]>;
 export function observable<Value, Args extends unknown[]>(
   read: undefined,
   write?: Write<Value, Args>,
@@ -67,7 +67,7 @@ export function observable<Value, Args extends unknown[]>(
        * We also need to re-run the read function if this is a new effect
        * to ensure that the effect is subscribed to this observable's dependents.
        */
-      if (!init || (effect && !effects.has(effect))) {
+      if (!init || (effect && read && !effects.has(effect))) {
         init = true;
         value =
           typeof read === "function"
@@ -105,9 +105,12 @@ export function observable<Value, Args extends unknown[]>(
       }
 
       value = nextValue;
+      init = true;
 
-      for (const effect of effects) {
-        effect.run();
+      if (effects.size > 0) {
+        for (const effect of effects) {
+          effect.run();
+        }
       }
     },
     remove(effect) {
@@ -150,27 +153,39 @@ export function observable<Value, Args extends unknown[]>(
  * In production, we don't need observability for everything,
  * so we can this to avoid the overhead of observability.
  */
-export type Mutable<Value> = {
+export type Mutable<Value, Args extends unknown[]> = {
   get(): Value;
-  set(value: Value): void;
+  set(...value: Args): void;
 };
 
-export function mutable<Value>(): Mutable<Value | undefined>;
 export function mutable<Value>(
-  value: undefined,
+  read: undefined,
+  write: undefined,
   equality?: Equality<Value>,
-): Mutable<Value | undefined>;
-export function mutable<Value>(
+): Mutable<Value | undefined, never[]>;
+export function mutable<Value>(): Mutable<Value | undefined, never[]>;
+export function mutable<Value, Args extends unknown[]>(
+  value: undefined,
+  write?: (...Args: Args) => Value,
+  equality?: Equality<Value>,
+): Mutable<Value | undefined, Args>;
+export function mutable<Value, Args extends unknown[]>(
   value?: Value,
+  write?: (...Args: Args) => Value,
   equality: Equality<Value> = Object.is,
-): Mutable<Value> {
+): Mutable<Value, Args> {
   return {
     get() {
       return value as Value;
     },
-    set(newValue: Value) {
-      if (!equality(value as Value, newValue)) {
-        value = newValue;
+    set(...args) {
+      const nextValue =
+        typeof write === "function"
+          ? write(...(args as Args))
+          : (args[0] as Value);
+
+      if (!equality(value as Value, nextValue)) {
+        value = nextValue;
       }
     },
   };
@@ -185,7 +200,7 @@ export class Effect {
   public dependencies = new Set<Observable<any, any[]>>();
 
   get<Value, Args extends unknown[]>(
-    readable: Observable<Value, Args> | Mutable<Value>,
+    readable: Observable<Value, Args> | Mutable<Value, Args>,
   ) {
     return readable.get(this);
   }
@@ -211,12 +226,9 @@ export function family<Value>(fn: (name: string) => Value) {
         result = fn(name);
         map.set(name, result);
       }
-      return result;
+      return result!;
     },
     {
-      set(key: string, value: Value) {
-        map.set(key, value);
-      },
       clear() {
         map.clear();
       },

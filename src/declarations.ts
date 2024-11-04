@@ -1,5 +1,7 @@
-import type { makeMutable } from "react-native-reanimated";
-import { animationSideEffects } from "./animations";
+import {
+  buildAnimationSideEffects,
+  type ReanimatedMutable,
+} from "./animations";
 import { styleFamily } from "./globals";
 import type { ConfigReducerState } from "./reducers/config";
 import type {
@@ -10,20 +12,18 @@ import type {
 } from "./types";
 import type { Effect } from "./utils/observable";
 
-type ReanimatedMutable = ReturnType<typeof makeMutable<number>>;
-
 export type Declarations = Effect & {
   epoch: number;
+  defaultStyle?: Record<string, any>;
   normal: StyleRule[];
   important: StyleRule[];
   guards: RenderGuard[];
-  animationProperties: AnimationProperties[];
-  animation?: AnimationProperties;
-  sharedValues?: Map<string, ReanimatedMutable>;
+  animation: AnimationProperties[];
   sideEffects?: SideEffectTrigger[];
+  sharedValues?: Map<string, ReanimatedMutable<any>>;
 };
 
-type Updates = {
+type DeclarationUpdates = {
   rules?: boolean;
   animation?: boolean;
 };
@@ -40,7 +40,7 @@ export function buildDeclarations(
     epoch: previous ? previous.epoch : 0,
     normal: [],
     important: [],
-    animationProperties: [],
+    animation: [],
     guards: [{ type: "prop", name: state.config.source, value: source }],
     run,
     dependencies: new Set(),
@@ -49,7 +49,7 @@ export function buildDeclarations(
     },
   };
 
-  let updates: Updates = {};
+  let updates: DeclarationUpdates = {};
 
   for (const className of source.split(/\s+/)) {
     const styleRuleSet = next.get(styleFamily(className));
@@ -76,10 +76,12 @@ export function buildDeclarations(
   }
 
   if (updates.rules || updates.animation) {
+    // If a rule or animation property changed, increment the epoch
     next.epoch++;
+
+    // If the animation's changed, then we need to update the animation side effects
     if (updates.animation) {
-      // This will mutate next with the side effects
-      animationSideEffects(next);
+      buildAnimationSideEffects(next, previous);
     }
   }
 
@@ -93,7 +95,7 @@ export function buildDeclarations(
  * @returns
  */
 function collectRules(
-  updates: Updates,
+  updates: DeclarationUpdates,
   styleRules: StyleRule[] | undefined,
   next: Declarations,
   previous: Declarations | undefined,
@@ -106,18 +108,19 @@ function collectRules(
   }
 
   let collectionIndex = Math.max(0, collection.length - 1);
-  let aIndex = Math.max(0, next.animationProperties.length - 1);
+  let aIndex = Math.max(0, next.animation.length - 1);
 
   for (const rule of styleRules) {
     if (!testRule(rule)) continue;
 
     if (rule.a) {
-      next.animationProperties.push(rule.a);
-      // Changing any animation property will restart all animations
-      updates.animation ||= Object.is(
-        previous?.animationProperties[aIndex],
-        rule.a,
-      );
+      next.animation.push(rule.a);
+      /**
+       * Changing any animation property will restart all animations
+       * TODO: This is not entirely accurate, Chrome does not restart animations
+       *       This is fine during this experimental stage, but we should fix this in the future
+       */
+      updates.animation ||= !Object.is(previous?.animation[aIndex], rule.a);
       aIndex++;
     }
 

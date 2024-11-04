@@ -1,6 +1,12 @@
 import { Appearance, Dimensions } from "react-native";
 import type { ColorSchemeName, LayoutRectangle } from "react-native";
-import type { Animation, StyleRuleSet, StyleValueDescriptor } from "./types";
+import { getAnimationDefaults } from "./animations";
+import type {
+  Animation,
+  RawAnimation,
+  StyleRuleSet,
+  StyleValueDescriptor,
+} from "./types";
 import { isDeepEqual } from "./utils/equality";
 import { family, mutable, observable, weakFamily } from "./utils/observable";
 
@@ -10,20 +16,38 @@ import { family, mutable, observable, weakFamily } from "./utils/observable";
  */
 export const styleFamily = family(() => {
   return process.env.NODE_ENV === "production"
-    ? mutable<StyleRuleSet>(undefined, isDeepEqual)
+    ? undefined //mutable<StyleRuleSet>(undefined, undefined, isDeepEqual)
     : observable<StyleRuleSet>(undefined, undefined, isDeepEqual);
 });
 
 export const variableFamily = family(() => {
   return process.env.NODE_ENV === "production"
-    ? mutable<StyleValueDescriptor>(undefined, isDeepEqual)
+    ? mutable<StyleValueDescriptor>(undefined, undefined, isDeepEqual)
     : observable<StyleValueDescriptor>(undefined, undefined, isDeepEqual);
 });
 
 export const animationFamily = family(() => {
   return process.env.NODE_ENV === "production"
-    ? mutable<Animation>(undefined, isDeepEqual)
-    : observable<Animation>(undefined, undefined, isDeepEqual);
+    ? mutable(
+        undefined,
+        (rawAnimation: RawAnimation): Animation => {
+          return {
+            ...rawAnimation,
+            defaults: getAnimationDefaults(rawAnimation),
+          };
+        },
+        isDeepEqual,
+      )
+    : observable(
+        undefined,
+        (_, rawAnimation: RawAnimation): Animation => {
+          return {
+            ...rawAnimation,
+            defaults: getAnimationDefaults(rawAnimation),
+          };
+        },
+        isDeepEqual,
+      );
 });
 
 export const rem = observable(14);

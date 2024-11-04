@@ -18,57 +18,85 @@ export function useAnimation(
   state: ComponentReducerState,
   props?: Record<string, any>,
 ) {
-  const animations = state.animations;
-  const transitions = state.transitions;
+  const groupedAnimations = state.animations;
+  const groupedTransitions = state.transitions;
   const originalStyle = state.props?.style as Record<string, any> | undefined;
 
   const animatedStyle = useAnimatedStyle(() => {
     const style: Record<string, any> = { ...originalStyle };
-
     const seenProperties = new Set<string>();
 
-    if (transitions) {
-      for (const [prop, sharedValue] of transitions) {
-        if (seenProperties.has(prop)) {
-          continue;
+    /**
+     * Duplicate of setValue() from src/utils/properties.ts.
+     * This version runs within the UI thread
+     */
+    function setValue(
+      paths: string | string[],
+      value: string | number,
+      target = style,
+    ) {
+      if (typeof paths === "string") {
+        target[paths] = value;
+        return;
+      }
+
+      for (let i = 0; i < paths.length; i++) {
+        let path = paths[i];
+
+        if (path === "transform" && i < paths.length - 1) {
+          const nextPath = paths[i + 1];
+          target.transform ??= [];
+          let existing = target.transform.find(
+            (obj: Record<string, unknown>) => obj[nextPath] !== undefined,
+          );
+          if (existing) {
+            existing[nextPath] = value;
+          } else {
+            target.transform.push({ [nextPath]: value });
+          }
+          break;
         }
 
-        seenProperties.add(prop);
-
-        style[prop] = sharedValue.value;
+        target[path] ??= {};
+        target = target[path];
       }
     }
 
-    if (animations) {
-      for (const [sharedValue, animationIO] of animations) {
-        const progress = sharedValue.value;
+    if (groupedTransitions) {
+      for (const transition of Object.values(groupedTransitions).flat()) {
+        if (!transition) {
+          continue;
+        }
+        if (seenProperties.has(transition[0])) {
+          continue;
+        }
 
-        for (const animation of animationIO) {
-          const prop = animation[0];
-          const interpolation = animation[1];
+        seenProperties.add(transition[0]);
 
-          if (!interpolation) continue;
+        style[transition[0]] = transition[1].value;
+      }
+    }
 
-          const interpolateFn = animation[2] ? interpolateColor : interpolate;
+    if (groupedAnimations) {
+      for (const animationIO of Object.values(groupedAnimations).flat()) {
+        if (!animationIO) {
+          continue;
+        }
 
-          const value = interpolateFn(
-            progress,
-            interpolation[0],
-            interpolation[1],
+        for (const propIO of animationIO[1]) {
+          const interpolateFn = propIO[2] ? interpolateColor : interpolate;
+          setValue(
+            propIO[0],
+            interpolateFn(animationIO[0].value, propIO[1][0], propIO[1][1]),
           );
-
-          style[prop] = value;
         }
       }
     }
 
     return style;
-  }, [animations, transitions]);
+  }, [groupedAnimations, groupedTransitions, originalStyle]);
 
-  if (state.animations || state.transitions) {
-    props ??= {};
-    props = { ...state.props, style: animatedStyle };
-  }
-
-  return props;
+  return state.animations || state.transitions
+    ? { ...state.props, style: animatedStyle }
+    : props;
 }

@@ -1,22 +1,25 @@
+import { getAnimationIO } from "./animations";
 import type { ContainerContextValue, VariableContextValue } from "./contexts";
 import type { ConfigReducerState } from "./reducers/config";
 import type { ResolveOptions } from "./resolvers";
 import { resolveValue } from "./resolvers";
 import type {
   Callback,
-  InlineStyle,
   RenderGuard,
+  SharedValueAnimationIO,
   SideEffectTrigger,
   StyleRule,
   StyleValueDescriptor,
 } from "./types";
 import { Effect } from "./utils/observable";
+import { setValue } from "./utils/properties";
 
 export type Styles = Effect & {
   epoch: number;
   guards: RenderGuard[];
   props?: Record<string, any>;
   sideEffects?: SideEffectTrigger[];
+  animationIO?: SharedValueAnimationIO[];
 };
 
 export function buildStyles(
@@ -27,21 +30,26 @@ export function buildStyles(
   inheritedContainers: ContainerContextValue,
   run: () => void,
 ) {
-  const next: Styles = {
+  const styles: Styles = {
     epoch: state.styles ? state.styles.epoch : -1,
     guards: [],
     run,
     dependencies: new Set(),
     get(readable) {
-      return readable.get(next);
+      return readable.get(styles);
     },
+  };
+
+  const next: ConfigReducerState = {
+    ...state,
+    styles,
   };
 
   const delayedStyles: Callback[] = [];
 
   const resolveOptions: ResolveOptions = {
     getProp: (name: string) => {
-      next.guards?.push({
+      styles.guards?.push({
         type: "prop",
         name: name,
         value: incomingProps[name],
@@ -61,20 +69,20 @@ export function buildStyles(
           ? inheritedVariables.get(name)
           : inheritedVariables?.[name];
 
-      next.guards?.push({ type: "variable", name: name, value });
+      styles.guards?.push({ type: "variable", name: name, value });
 
       return value;
     },
     getContainer: (name: string) => {
       const value = inheritedContainers[name];
-      next.guards?.push({ type: "container", name: name, value });
+      styles.guards?.push({ type: "container", name: name, value });
       return value;
     },
   };
 
   if (state.declarations?.normal) {
-    next.props = applyStyles(
-      next.props,
+    styles.props = applyStyles(
+      styles.props,
       state.declarations?.normal,
       state,
       delayedStyles,
@@ -82,9 +90,11 @@ export function buildStyles(
     );
   }
 
+  styles.animationIO = getAnimationIO(state, styles, resolveOptions);
+
   if (state.declarations?.important) {
-    next.props = applyStyles(
-      next.props,
+    styles.props = applyStyles(
+      styles.props,
       state.declarations?.important,
       state,
       delayedStyles,
@@ -98,7 +108,7 @@ export function buildStyles(
     }
   }
 
-  next.epoch++;
+  styles.epoch++;
   return next;
 }
 
@@ -133,7 +143,7 @@ function applyStyles(
               delayedStyles.push(() => {
                 const placeholder = value;
                 value = resolveValue(state, originalValue, resolveOptions);
-                setValue(state, declaration[1], value, props, placeholder);
+                setValue(props, declaration[1], value, state, placeholder);
               });
             } else {
               value = resolveValue(state, value, resolveOptions);
@@ -141,7 +151,7 @@ function applyStyles(
           }
 
           // This mutates and/or creates the props object
-          props = setValue(state, declaration[1], value, props);
+          props = setValue(props, declaration[1], value, state);
         } else {
           props ??= {};
           props.style ??= {};
@@ -153,104 +163,3 @@ function applyStyles(
 
   return props;
 }
-
-function setValue(
-  state: ConfigReducerState,
-  paths: string | string[],
-  value: string | number | InlineStyle,
-  rootProps: Record<string, any> = {},
-  // Only set the value if the current value is a placeholder
-  placeholder?: Record<string, any>,
-) {
-  let props = rootProps;
-  const target = state.config.target;
-
-  if (typeof paths === "string") {
-    assignFinalValueToProps(props, paths, value, target, placeholder);
-    return rootProps;
-  }
-
-  for (let i = 0; i < paths.length; i++) {
-    let path = paths[i];
-
-    if (i === 0 && path.startsWith("^")) {
-      path = path.slice(1);
-      props ??= {};
-      props[target] ??= {};
-      props = props[target];
-    }
-
-    if (i === paths.length - 1) {
-      assignFinalValueToProps(props, path, value, target, placeholder);
-      return rootProps;
-    }
-
-    props ??= {};
-    props[path] ??= {};
-    props = props[path];
-  }
-
-  return rootProps;
-}
-
-function assignFinalValueToProps(
-  props: Record<string, any>,
-  path: string,
-  value: unknown,
-  target: string,
-  // Only set the value if the current value is a placeholder
-  placeholder?: Record<string, any>,
-): void {
-  if (path.startsWith("^")) {
-    path = path.slice(1);
-    props[target] ??= {};
-    props = props[target];
-  }
-
-  target = path;
-
-  if (transformKeys.has(target)) {
-    props ??= {};
-    props.transform ??= [];
-
-    let transformObj = props.transform.find(
-      (obj: Record<string, unknown>) => obj[target] !== undefined,
-    );
-
-    if (!transformObj) {
-      transformObj = {};
-      props.transform.push(transformObj);
-    }
-
-    // If we have a placeholder, only set the value if the current value is the placeholder
-    if (placeholder && transformObj[target] !== placeholder) {
-      return;
-    }
-
-    transformObj[target] = value;
-  } else {
-    // If we have a placeholder, only set the value if the current value is the placeholder
-    if (placeholder && props[target] !== placeholder) {
-      return;
-    }
-
-    props[target] = value;
-  }
-}
-
-export const transformKeys = new Set([
-  "translateX",
-  "translateY",
-  "scale",
-  "scaleX",
-  "scaleY",
-  "rotate",
-  "rotateX",
-  "rotateY",
-  "rotateZ",
-  "skewX",
-  "skewY",
-  "perspective",
-  "matrix",
-  "transformOrigin",
-]);

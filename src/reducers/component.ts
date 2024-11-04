@@ -36,9 +36,9 @@ export type ComponentReducerState = Readonly<{
   // These are mostly used to control animations
   sideEffects?: Record<string, SideEffectTrigger[] | undefined>;
   // Animations
-  animations?: SharedValueAnimationIO[];
+  animations?: Record<string, SharedValueAnimationIO[] | undefined>;
   // Transitions
-  transitions?: TransitionTuple[];
+  transitions?: Record<string, TransitionTuple[] | undefined>;
 }>;
 
 export type ComponentReducerAction =
@@ -124,6 +124,7 @@ export function performConfigReducerActions(
   let nextActiveActions: Maybe<Record<string, Maybe<ConfigReducerAction[]>>>;
   let nextFocusActions: Maybe<Record<string, Maybe<ConfigReducerAction[]>>>;
   let nextSideEffects: Maybe<Record<string, Maybe<SideEffectTrigger[]>>>;
+  let nextAnimationIO: Maybe<Record<string, Maybe<SharedValueAnimationIO[]>>>;
 
   /**
    * This reducer's state is used as the props for multiple components/hooks.
@@ -183,7 +184,7 @@ export function performConfigReducerActions(
     if (
       !Object.is(
         configState.declarations?.sideEffects,
-        configState.declarations?.sideEffects,
+        nextConfigState.declarations?.sideEffects,
       )
     ) {
       nextSideEffects ??= {};
@@ -195,12 +196,24 @@ export function performConfigReducerActions(
     if (
       !Object.is(
         configState.styles?.sideEffects,
-        configState.styles?.sideEffects,
+        nextConfigState.styles?.sideEffects,
       )
     ) {
       nextSideEffects ??= {};
       nextSideEffects[`$s:${nextConfigState.key}`] =
         nextConfigState.styles?.sideEffects;
+    }
+
+    // Did animations change?
+    if (
+      !Object.is(
+        configState.styles?.animationIO,
+        nextConfigState.styles?.animationIO,
+      )
+    ) {
+      nextAnimationIO ??= {};
+      nextAnimationIO[nextConfigState.key] =
+        nextConfigState.styles?.animationIO;
     }
 
     // Did hover actions change?
@@ -240,6 +253,7 @@ export function performConfigReducerActions(
     nextHoverActions ?? state.hoverActions,
     nextActiveActions ?? state.activeActions,
     nextFocusActions ?? state.focusActions,
+    nextAnimationIO ?? state.animations,
     sideEffects,
   );
 }

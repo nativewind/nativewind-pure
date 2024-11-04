@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
 import {
+  animationFamily,
   ContainerContext,
   styleFamily,
   UniversalVariableContext,
@@ -7,6 +8,7 @@ import {
   type ComponentReducerState,
   type ConfigReducerState,
   type ContainerContextValue,
+  type RawAnimation,
   type StyleDeclaration,
   type StyleRule,
   type StyleRuleSet,
@@ -29,10 +31,9 @@ jest.mock("react-native", () => {
 
 export function addStyle(className: string, ruleSet: StyleRuleSet): void;
 export function addStyle(className: string, rule: StyleRule): void;
-export function addStyle(className: string, rule: StyleRule[]): void;
 export function addStyle(
   className: string,
-  normalDeclarations: StyleDeclaration[],
+  normalDeclarations: StyleDeclaration[] | StyleRule[],
 ): void;
 export function addStyle(
   className: string,
@@ -40,15 +41,19 @@ export function addStyle(
 ): void {
   if (Array.isArray(value)) {
     if (isStyleRuleArray(value)) {
-      styleFamily.set(className, observable({ n: value }));
+      styleFamily(className).set({ n: value });
     } else {
-      styleFamily.set(className, observable({ n: [{ s: [0], d: value }] }));
+      styleFamily(className).set({ n: [{ s: [0], d: value }] });
     }
   } else if ("s" in value) {
-    styleFamily.set(className, observable({ n: [value] }));
+    styleFamily(className).set({ n: [value] });
   } else {
-    styleFamily.set(className, observable(value));
+    styleFamily(className).set(value);
   }
+}
+
+export function addKeyFrames(name: string, keyframes: RawAnimation): void {
+  animationFamily(name).set(keyframes);
 }
 
 function isStyleRuleArray(

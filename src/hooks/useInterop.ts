@@ -132,13 +132,18 @@ export function buildUseInterop(type: ComponentType, ...configs: Config[]) {
     let nextProps: Record<string, any> | undefined;
     nextProps = useInteraction(state, nextProps);
     nextProps = useAnimation(state, nextProps);
+
+    /**
+     * Assign to a new variable so we don't modify the state directly
+     */
+    let result = state;
     if (nextProps) {
-      state = { ...state, props: { ...state.props, ...nextProps } };
+      result = { ...state, props: { ...state.props, ...nextProps } };
     }
 
-    useDebugValue(state);
+    useDebugValue(result);
 
-    return state;
+    return result;
   };
 }
 

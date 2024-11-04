@@ -6,7 +6,6 @@ import { buildStyles, type Styles } from "../styles";
 import type {
   ConfigWithKey,
   InlineStyle,
-  SideEffectTrigger,
   StyleValueDescriptor,
 } from "../types";
 import { cleanupEffect } from "../utils/observable";
@@ -50,10 +49,6 @@ export function configReducer(
   switch (action.type) {
     case "update-definitions": {
       let nextState = updateDefinitions(state, dispatch, incomingProps);
-      if (Object.is(state, nextState)) {
-        return state;
-      }
-
       return Object.is(state, nextState)
         ? state
         : updateStyles(
@@ -106,17 +101,17 @@ function updateDefinitions(
     });
   });
 
+  /*
+   * If they are the same epoch, then nothing changed.
+   * However, we created a new effect that needs to be cleaned up
+   */
   if (next.epoch === previous?.epoch) {
-    /*
-     * If they are the same epoch, then nothing changed.
-     * However, we created a new effect that needs to be cleaned up
-     */
     cleanupEffect(next);
     return state;
   }
 
   // Clean up the previous effect
-  cleanupEffect(state.declarations);
+  cleanupEffect(previous);
 
   return {
     ...state,
@@ -125,7 +120,7 @@ function updateDefinitions(
 }
 
 function updateStyles(
-  state: ConfigReducerState,
+  previous: ConfigReducerState,
   dispatch: Dispatch<ComponentReducerAction>,
   incomingProps: Record<string, unknown>,
   inheritedVariables: VariableContextValue,
@@ -136,9 +131,8 @@ function updateStyles(
    * Currently the styles will always be updated, but in the future we can
    * optimize this to only update when the props have changed.
    */
-  const previous = state.styles;
   const next = buildStyles(
-    state,
+    previous,
     incomingProps,
     inheritedVariables,
     universalVariables,
@@ -146,20 +140,20 @@ function updateStyles(
     () => {
       dispatch({
         type: "perform-config-reducer-actions",
-        actions: [{ action: { type: "update-styles" }, key: state.key }],
+        actions: [{ action: { type: "update-styles" }, key: previous.key }],
       });
     },
   );
 
-  if (next.epoch === previous?.epoch) {
+  if (next.styles?.epoch === previous?.styles?.epoch) {
     /*
      * If they are the same epoch, then nothing changed.
      * However, we created a new effect that needs to be cleaned up
      */
-    cleanupEffect(next);
-    return state;
+    cleanupEffect(next.styles);
+    return previous;
   }
 
-  cleanupEffect(previous);
-  return { ...state, styles: next, props: next.props };
+  cleanupEffect(previous.styles);
+  return next;
 }

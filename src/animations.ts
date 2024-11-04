@@ -2,23 +2,32 @@ import type { EasingFunction, Time } from "lightningcss";
 import type { makeMutable } from "react-native-reanimated";
 import type { Declarations } from "./declarations";
 import { animationFamily } from "./globals";
+import type { ConfigReducerState } from "./reducers/config";
+import { resolveValue, type ResolveOptions } from "./resolvers";
 import type {
+  AnimationIO,
   AnimationProperties,
+  AnimationPropIO,
   AnimationStep,
+  RawAnimation,
+  SharedValueAnimationIO,
   SideEffectTrigger,
 } from "./types";
+import type { Effect } from "./utils/observable";
+import { defaultValues, setValue } from "./utils/properties";
 
-export type AnimationMutable = ReturnType<typeof makeMutable<number>>;
+export type ReanimatedMutable<Value> = ReturnType<typeof makeMutable<Value>>;
+export type AnimationMutable = ReanimatedMutable<number>;
 
 /**
  * Animations are all linked. If any animation property changes, all animations
  * will restart.
  */
-export function animationSideEffects(
+export function buildAnimationSideEffects(
   next: Declarations,
   previous?: Declarations,
 ) {
-  if (!next.animationProperties) return next;
+  if (!next.animation) return next;
 
   const {
     name: names = defaultAnimation.name,
@@ -26,7 +35,7 @@ export function animationSideEffects(
     delay: delays = defaultAnimation.delay,
     timingFunction: baseEasingFuncs = defaultAnimation.timingFunction,
     iterationCount: iterationList = defaultAnimation.iterationCount,
-  } = Object.assign({}, ...next.animationProperties) as AnimationProperties;
+  } = Object.assign({}, ...next.animation) as AnimationProperties;
 
   if (!names.length) return next;
 
@@ -42,15 +51,12 @@ export function animationSideEffects(
       previousNames = new Set(previous.sharedValues.keys());
     }
 
-    let isNone = false;
-
     for (let index = 0; index < names.length; index++) {
       const animationName = names[index];
 
       // If any animation is set to none, we should cancel all animations
       if (animationName.type === "none") {
-        isNone = true;
-        break;
+        continue;
       }
 
       const name = animationName.value;
@@ -65,6 +71,11 @@ export function animationSideEffects(
         continue;
       }
 
+      /**
+       * Set the default style for the animation
+       * These values are used when the animation is removed or missing
+       * values
+       */
       let start = 0;
       const delay = timeToMS(delays[index % delays.length]);
       const duration = timeToMS(durations[index % durations.length]);
@@ -97,7 +108,7 @@ export function animationSideEffects(
         // Start the animation
         mutable.value = getAnimationTiming(
           mutable,
-          animation.steps,
+          animation.s,
           0,
           0,
           duration,
@@ -114,21 +125,12 @@ export function animationSideEffects(
      * render, as they haven't started yet. We only need to cancel animations
      * from the previous render(s).
      */
-    if (isNone && previousSharedValues) {
-      sideEffects = Array.from(previousSharedValues, (entry) => {
-        // TODO: Setup animation defaults
-        const mutable = entry[1];
-        return () => {
-          mutable.value = 0;
-          cancelAnimation(mutable);
-        };
-      });
-    } else if (previousNames && previousNames.size) {
+    if (previousNames && previousNames.size) {
       // Cancel any animations that are no longer present
       sideEffects.push(
         ...Array.from(previousNames, (name) => {
-          // TODO: Setup animation defaults
           const mutable = previousSharedValues!.get(name)!;
+          previousSharedValues?.delete(name);
           return () => {
             mutable.value = 0;
             cancelAnimation(mutable);
@@ -150,6 +152,60 @@ export function animationSideEffects(
 
     return next;
   }
+}
+
+export function getAnimationIO(
+  state: ConfigReducerState,
+  effect: Effect,
+  options: ResolveOptions,
+) {
+  const sharedValues = state.declarations?.sharedValues;
+  if (!sharedValues) return;
+
+  const animationNames = state.declarations?.animation?.findLast(
+    (value) => "name" in value,
+  )?.name;
+
+  if (!animationNames) return;
+
+  const sharedValueIO: SharedValueAnimationIO[] = [];
+
+  for (const name of animationNames) {
+    if (name.type === "none") {
+      continue;
+    }
+
+    const propIO: AnimationPropIO[] = [];
+    const sharedValue = sharedValues.get(name.value);
+
+    const animation = effect.get(animationFamily(name.value));
+    if (!animation || !sharedValue) {
+      continue;
+    }
+
+    let progress = 0;
+    for (const propertyFrame of animation.p) {
+      const frames = propertyFrame[1];
+      const io: AnimationIO = [[], []];
+
+      for (const frame of frames) {
+        progress += frame[0] - progress;
+
+        io[0].push(progress);
+        io[1].push(
+          frame[1] === "!INHERIT!"
+            ? frame[1]
+            : resolveValue(state, frame[1], options),
+        );
+      }
+
+      propIO.push([propertyFrame[0], io, false]);
+    }
+
+    sharedValueIO.push([sharedValue, propIO]);
+  }
+
+  return sharedValueIO;
 }
 
 export function getAnimationTiming(
@@ -250,6 +306,17 @@ export function getEasing(
 const timeToMS = (time: Time) => {
   return time.type === "milliseconds" ? time.value : time.value * 1000;
 };
+
+export function getAnimationDefaults(rawAnimation: RawAnimation) {
+  const style: Record<string, any> = {};
+
+  for (const frame of rawAnimation.p) {
+    const prop = frame[0];
+    setValue(style, prop, defaultValues[prop]);
+  }
+
+  return style;
+}
 
 const defaultAnimation: Required<AnimationProperties> = {
   name: [],
